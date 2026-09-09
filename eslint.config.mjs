@@ -2,8 +2,11 @@
 import { readFileSync } from 'node:fs';
 
 // ⛔ ONE LIST, TWO CONSUMERS — see app/(dms)/_lib/spec-forms.json. The same
-// file is read by Harper/tools/dms-checks/i18n-keys.js, so a form added to
-// the computed-key exception is enrolled in the key check by construction.
+// file is also read by the i18n key-check harness, so a form added to the
+// computed-key exception is enrolled in the key check by construction.
+// ⚠ RENAMING A FIELD HERE CAN SILENCE THAT HARNESS WITHOUT FAILING ANYTHING.
+// After any change to this list, re-run it: it must still report the same
+// number of pairs with its control firing. A count of 0 checked is the tell.
 const SPEC_FORMS = JSON.parse(readFileSync('./app/(dms)/_lib/spec-forms.json', 'utf8'));
 const SPEC_FORM_FILES = SPEC_FORMS.forms.map((f) => f.form);
 import { FlatCompat } from '@eslint/eslintrc';
@@ -39,7 +42,7 @@ const compat = new FlatCompat({
 // present in the file. Composing from one definition is what stops that.
 
 const NO_BACKEND_MESSAGE =
-  'DMS is frontend and mock data only (Mohammad, 2026-09-07): no database, no backend service, no API calls for domain data. All data access goes through lib/dms/mock-store.ts. If this genuinely needs a backend it goes to the Tech Lead — not a workaround here.';
+  'DMS is frontend and mock data only, by product decision: no database, no backend service, no API calls for domain data. All data access goes through lib/dms/mock-store.ts. If this genuinely needs a backend it goes to the Tech Lead — not a workaround here.';
 
 const NO_BACKEND_GLOBALS = [
   { name: 'fetch', message: NO_BACKEND_MESSAGE },
@@ -220,7 +223,7 @@ const eslintConfig = [
   // than merely conventional.
   //
   // ⚠ THE DASHBOARD IS EXEMPTED FROM THE KPI-AGGREGATE BAN BELOW, DELIBERATELY
-  // AND VISIBLY — 2026-09-08, Amanda's ruling via Christina. This is the
+  // AND VISIBLY — 2026-09-08, by ruling. This is the
   // narrowing the rule's own message always said would happen, and it is a diff
   // rather than an omission, which was the point of writing it as a rule.
   //
@@ -282,8 +285,8 @@ const eslintConfig = [
 
   // ─── The dashboard: the KPI-aggregate ban narrowed, and nothing else ──────
   //
-  // The one route allowed to import `computeIntermediateTotals`. Amanda's
-  // ruling via Christina, 2026-09-08: build the dashboard on dev for Mohammad.
+  // The one route allowed to import `computeIntermediateTotals`. Narrowed by
+  // ruling, 2026-09-08, to allow the dashboard to be built on dev.
   //
   // ONLY `no-restricted-imports` is restated here, and it restates the FULL
   // no-backend set minus the KPI entries. A later flat-config block REPLACES an

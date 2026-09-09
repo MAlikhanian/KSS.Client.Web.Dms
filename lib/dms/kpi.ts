@@ -95,7 +95,7 @@ export interface DmsIntermediateTotals {
    * The number of APPROVED REPORTS in the input — a count of reports, not of
    * distinct dates.
    *
-   * ⚠ IT WAS CALLED `days` AND THAT NAME WAS WRONG, NOT THE BEHAVIOUR. Amir,
+   * ⚠ IT WAS CALLED `days` AND THAT NAME WAS WRONG, NOT THE BEHAVIOUR. The customer,
    * msg 194: mean daily volume is «the total sum of all dredged volumes in the
    * daily reports divided by THE NUMBER OF DAILY REPORTS». The implementation
    * always counted reports; the labels around it said "days".
@@ -116,7 +116,7 @@ export interface DmsIntermediateTotals {
    * the arithmetic right if it ever does.
    *
    * ⚠ AND THERE IS A SECOND PATH TO THE SAME DIVERGENCE, ALREADY RAISED.
-   * Amir has named two or three shifts per day as a future possibility. Under
+   * The customer has named two or three shifts per day as a future possibility. Under
    * that, one date yields several reports and `reportCount` stops equalling a
    * count of dates — while remaining exactly the divisor he specified. Two
    * independent routes, so this is not a hypothetical kept alive for tidiness.
@@ -284,7 +284,7 @@ export function computeIntermediateTotals(input: {
 
     // The ROUND TRIP — dredging start to arrival back at the dredging site.
     // ۲-۸'s `returnEnd` is «زمان رسیدن به محل لایروبی», which is the arrival
-    // Amir's definition names, so this is his phrase mapped to his field.
+    // the customer's definition names, so this is his phrase mapped to his field.
     const roundTrip = minutesBetween(cycle.dredgingStart, cycle.returnEnd);
     if (roundTrip === null) unparseableRoundTrips += 1;
     else roundTripMinutes += roundTrip;
@@ -323,7 +323,7 @@ export function computeIntermediateTotals(input: {
     }
   }
 
-  // A count of REPORTS, per Amir msg 194 — see `reportCount` in the interface
+  // A count of REPORTS, per the customer's answer, msg 194 — see `reportCount` in the interface
   // for why this is not a count of distinct dates and must not become one.
   const reportCount = input.reports.length;
 
@@ -458,7 +458,7 @@ export interface DmsKpiSet {
   meanCycleTime: KpiResult;
   meanDailyDredgedVolume: KpiResult;
 
-  // CLOSED 2026-09-08 by Amir's own answer (msg 194). These were typed
+  // CLOSED 2026-09-08 by the customer's own answer (msg 194). These were typed
   // `AwaitingDefinition` ALONE so that filling them could not happen by
   // accident — closing them required changing the type, which is this diff.
   // The gap variant was NOT given a numeric field and was NOT widened
@@ -510,7 +510,7 @@ export function computeKpis(input: {
 }): DmsKpiSet {
   const totals = computeIntermediateTotals(input);
 
-  // Amir, msg 194: «Currently, there is only a single 24-hour work shift per
+  // The customer, msg 194: «Currently, there is only a single 24-hour work shift per
   // day; proceed with this assumption for now, though the day may be divided
   // into two or three shifts in the future.» So the denominator is the whole
   // day, counted once per approved REPORT. TWO OR THREE SHIFTS ARE A STATED
@@ -521,7 +521,7 @@ export function computeKpis(input: {
   return {
     totals,
 
-    // SETTLED BY AMIR, msg 194: «the average of the time interval from the
+    // SETTLED BY THE CUSTOMER, msg 194: «the average of the time interval from the
     // start of each cycle until the vessel returns to the dredging site».
     // That is the ROUND TRIP, and it maps onto ۲-۸'s fields with no inference —
     // `returnEnd` is «زمان رسیدن به محل لایروبی», arrival at the dredging site.
@@ -560,7 +560,7 @@ export function computeKpis(input: {
           },
 
     // "Per day" over which days? Calendar days in the range, or days that were
-    // actually approved? Settled by Amir, msg 194: «divided by the number of
+    // actually approved? Settled by the customer, msg 194: «divided by the number of
     // daily reports». So the divisor is the count of APPROVED REPORTS, which
     // keeps numerator and denominator drawn from the same approved set — and a
     // day nobody reported does not silently depress the average.
@@ -617,9 +617,9 @@ export function computeKpis(input: {
 
     // ⚠ SPLIT BY CATEGORY ON OUR READING, NOT HIS INSTRUCTION.
     //
-    // Amir wrote ONE «total downtime divided by 24 hours». §4 names درصد توقف
+    // The customer wrote ONE «total downtime divided by 24 hours». §4 names درصد توقف
     // فنی and درصد توقف عملیاتی as TWO separate KPIs and he did not retract
-    // that, so we show two. This is Christina's ruling, and it is safe in the
+    // that, so we show two. This is our own ruling, and it is safe in the
     // direction it fails: if the reading is wrong he sees two tiles where he
     // expected one, which is additive and visible, rather than one figure
     // silently merging two he wanted apart.
@@ -687,7 +687,7 @@ function percentOfDay(
 }
 
 /**
- * Earned value — Amir, msg 194 answer 3: «Dividing the total contract amount by
+ * Earned value — the customer's answer 3, msg 194: «Dividing the total contract amount by
  * the total specified dredging volume yields a rate considered as the unit
  * value per cubic meter … multiplying this unit rate by the dredged volume
  * reported in daily logs allows calculating the value of work completed».
