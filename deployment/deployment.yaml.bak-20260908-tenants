@@ -1,0 +1,432 @@
+# =============================================================================
+#  KSS Client Web — dms domain app (multi-zone)
+# =============================================================================
+#  Modelled on CustomerRisk/deployment/deployment.yaml — the nearest structural
+#  peer, not CashAdvance. CustomerRisk is frontend-and-mock-only and declares
+#  exactly one backend (AUTH) plus tenants; DMS declares the same two and
+#  nothing else. Every identifier below was derived from domains.json
+#  (folder "Dms", slug "dms", zone false) rather than adapted from another
+#  zone's file, because the known failure in this estate is a manifest that is
+#  correct in most fields.
+#
+#  ---------------------------------------------------------------------------
+#  ⚠⚠ THIS MANIFEST IS NOT DEPLOYABLE YET. ONE PRECONDITION IS UNMET.
+#
+#      app/api/health/route.ts DOES NOT EXIST IN THIS REPO.
+#
+#  All 13 deployed zones ship one; the _Kit template ships none, so each zone
+#  authored its own (all 12 zone copies differ — each embeds its own name).
+#  DMS and Template are the only two without it. The three probes below point
+#  at /dms/api/health, which today returns 404: startupProbe would fail 36
+#  times at 5s and the container would be killed, then CrashLoopBackOff. The
+#  pod would never become Ready.
+#
+#  That failure is loud, but it reads as "the image is broken" rather than
+#  "the manifest asked for a route nobody wrote" — so it is stated here, at
+#  the field that depends on it, and not only in a task list.
+#
+#  Verified, so nobody re-derives it: middleware.ts does NOT block the probe.
+#  Its matcher excludes only _next/static, _next/image, api/auth and favicon,
+#  but ruleFor('/api/health') matches none of the four ROUTE_ROLES prefixes,
+#  so it returns NextResponse.next(). The 404 is an absent route, nothing else.
+#
+#  ---------------------------------------------------------------------------
+#  1. NO INGRESS — AND NOT FOR THE REASON THE OTHER ZONES GIVE.
+#
+#  Every other zone's manifest says "this app has no middleware.ts, so direct
+#  exposure would give an unauthenticated visitor a rendering page instead of a
+#  redirect to sign-in". THAT SENTENCE IS FALSE HERE. DMS is the only zone in
+#  the estate that HAS a middleware.ts. Copying it in would have shipped a
+#  false comment into the one file where it does not hold.
+#
+#  The true reason is stronger. middleware.ts gates four route prefixes by
+#  DMS role, and its own header states the size of that honestly:
+#
+#      "THIS GATES THE THREE-ROLE DEMO DETERMINISTICALLY.
+#       IT AUTHENTICATES NOTHING. The role is a cookie the browser owns and
+#       anyone can set."
+#
+#  So an Ingress here would be worse than on a zone with no middleware at all:
+#  the guard would make direct exposure LOOK controlled while the visitor holds
+#  the only input it reads. The Shell stays the single public entrypoint.
+#
+#  NO INGRESS HOST IS SET ANYWHERE IN THIS FILE, and that is still correct.
+#
+#  ⓘ 2026-09-08: when this was written the routing role of mkoffice.ir was
+#  INFERRED, and refusing to commit an inferred hostname was right. Mohammad has
+#  since STATED it — a new tenant company on mkoffice.ir. It is no longer an
+#  inference. It still does not belong here: a tenant host reaches DMS through
+#  the Shell like every other host, never through an Ingress on this zone.
+#
+#  ---------------------------------------------------------------------------
+#  2. ✅ COMPOSED 2026-09-08. WAS "NOT A ZONE" — HELD 2026-09-07 TO 2026-09-08.
+#
+#  WHILE IT HELD, domains.json line 184 read "zone": false with heldBackReason.
+#  Quoted here as the HISTORICAL value — the row no longer says this:
+#    "Frontend and mock data only by Mohammad's ruling 2026-09-07 — no
+#     database, no backend service. NOT sellable and NOT composed until a
+#     backend exists."
+#
+#  THAT TEXT STOPPED A BUILD ORDER ON 2026-09-08 AND WAS CORRECT TO. Being
+#  DEPLOYABLE is not being DEPLOYED — and it became DEPLOYED by a separate
+#  decision, which is exactly how it was supposed to happen.
+#
+#  LIFTED 2026-09-08 on Mohammad's instruction. domains.json is now "zone": true
+#  with a note carrying the same reasoning, and dms is a key in the Shell's
+#  ConfigMap zones value (13 keys).
+#
+#  ⚠ UNCHANGED BY COMPOSITION: frontend and mock data only, no backend service,
+#  no database, tier: internal, every figure on the 16 screens invented. Never
+#  sellable while the code is a mock.
+#
+#  ---------------------------------------------------------------------------
+#  3. ⚠ THIS APP'S DATA IS BROWSER localStorage (lib/dms/mock-store.ts).
+#
+#  There is no KSS.Service.Dms. Ten domain keys (dms:projects, dms:subprojects,
+#  dms:vessels, dms:vessel-assignments, dms:personnel,
+#  dms:personnel-assignments, dms:shifts, dms:daily-reports, dms:cycles,
+#  dms:stoppages) plus dms:seed-version live only in each user's browser, and
+#  survive only while this app is served from the SAME ORIGIN. Serving it from
+#  a different hostname makes every user's data invisible — a second reason the
+#  ingress question is not cosmetic. ⚠ SEED_VERSION: DO NOT COPY CustomerRisk.
+#
+#  CustomerRisk carries "SEED_VERSION must stay 2" and that is NOT the rule
+#  here. DMS version-gates ALL ten keys with no per-key emptiness guard, and
+#  the CRUD screens made every one of them USER-WRITABLE - so a bump destroys
+#  entered data, and mock-store.ts advertises the bump as the way to reinstall
+#  samples. Sydney ruling 2026-09-08: emptiness-guard every key, so a bump
+#  fills only what is absent.
+#
+#  ⏳ EXPIRY: DELETE THIS SEED_VERSION PARAGRAPH once that guard is in. It is
+#  a note about a defect being fixed, not a standing constraint, and a stale
+#  constraint in a permanent file is read as a live one forever.
+#
+#  ---------------------------------------------------------------------------
+#  THREE THINGS ARE NOT IN THIS FILE, in order of how quietly each one fails:
+#
+#   A. docker-secret, in THIS namespace.
+#      Secrets are namespace-scoped; the one in kss-client-web does not carry
+#      over. Pods sit in ImagePullBackOff — loud, and describe names the cause.
+#
+#   B. nextauth-secret, copied from the Shell.
+#      Deliberately absent from the Secret below. CreateContainerConfigError
+#      until it exists — loud by design. See the note at NEXTAUTH_SECRET, which
+#      does NOT repeat the other zones' justification, because it is not true
+#      of this app.
+#
+#   C. app/api/health/route.ts, in the repo. The precondition above. It is
+#      listed here because it belongs in the same list: it is the one that
+#      fails at a layer where the manifest looks correct.
+# =============================================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kss-client-web-dms
+  labels:
+    name: kss-client-web-dms
+    app: kss-client-web-dms
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kss-client-web-dms
+  namespace: kss-client-web-dms
+  labels:
+    app: kss-client-web-dms
+    version: v1.0.0
+  annotations:
+    keel.sh/policy: force
+    keel.sh/match-tag: "true"
+    keel.sh/trigger: poll
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app: kss-client-web-dms
+  template:
+    metadata:
+      labels:
+        app: kss-client-web-dms
+        version: v1.0.0
+    spec:
+      imagePullSecrets:
+      - name: docker-secret
+      containers:
+      - name: kss-client-web-dms
+        image: docker-hosted.sebaoffice.ir/kss-client-web-dms:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+          name: http
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3000"
+        - name: HOSTNAME
+          value: "0.0.0.0"
+        - name: TZ
+          value: "UTC"
+
+        # The NextAuth session cookie carries every permission claim (~25 KB
+        # JWE-encoded) and overflows Node's default 16 KB header buffer. This
+        # zone receives that same cookie, so it needs the same allowance or the
+        # request arrives as HTTP 431 / 502.
+        - name: NODE_OPTIONS
+          value: "--max-http-header-size=131072"
+
+        # ── Auth ────────────────────────────────────────────────────────────
+        # ⚠ MUST BE BYTE-IDENTICAL TO THE SHELL'S.
+        #
+        # The other zones justify this with "this app decrypts the cookie the
+        # Shell issued". THAT IS NOT TRUE OF DMS TODAY, and the claim is not
+        # repeated here: DMS has ZERO server-side session reads. Measured —
+        # no getServerSession, no getToken anywhere in its own code (only a
+        # type import and a doc comment). CashAdvance has 36 such files.
+        # next-auth appears here only as CLIENT useSession, which in production
+        # is served by the SHELL's /api/auth/*, never by this app. This repo
+        # ships app/api/auth/[...nextauth]/auth-options.ts with NO route.ts —
+        # config without a handler, exactly as all 13 other zones do.
+        #
+        # It is set anyway, non-optional, for two reasons that are about the
+        # failure direction rather than today's code:
+        #   · absent + non-optional is CreateContainerConfigError, which is
+        #     loud NOW. The first server component that reads a session would
+        #     otherwise fail at request time, on a pod already reporting Ready.
+        #   · 13 of 13 zones set it and none marks it optional. A zone that
+        #     uniquely omits it is a divergence decision, and this is not the
+        #     file in which to take one.
+        #
+        # An EMPTY value would be worse than absent: valid base64, so the key
+        # exists, the pod STARTS, and next-auth reads "" (it uses ??, so "" is
+        # not defaulted). A checked-in key would also be re-blanked by every
+        # `kubectl apply`.
+        - name: NEXTAUTH_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: kss-client-web-dms-secrets
+              key: nextauth-secret
+
+        # The public origin. Cookies are scoped by host and path, never by port
+        # or by which pod answered — so this stays the Shell's URL.
+        - name: NEXTAUTH_URL
+          value: "https://erp.seba.ir"
+
+        # Used by next.config.mjs to proxy /api/auth/* back to the Shell. That
+        # rewrite is DEV-ONLY (returns [] when NODE_ENV !== development), so in
+        # cluster this is inert — set for parity and for local `docker run`.
+        - name: SHELL_URL
+          value: "https://erp.seba.ir"
+
+        # ── Application ─────────────────────────────────────────────────────
+        # NEXT_PUBLIC_BASE_PATH is inlined at BUILD time by the Dockerfile ARG
+        # (Dockerfile:22 already defaults it to "/dms"), not read here. Set at
+        # runtime too so a mismatch shows in `kubectl describe` rather than only
+        # as broken asset URLs. It must equal next.config.mjs's basePath.
+        - name: NEXT_PUBLIC_BASE_PATH
+          value: "/dms"
+        - name: NEXT_PUBLIC_APP_NAME
+          value: "KSS_Client_Web_dms"
+
+        # ── Tenant branding ─────────────────────────────────────────────────
+        # Same ConfigMap pattern as the Shell's. Read by lib/tenants.ts
+        # (parseTenants defaults its argument to process.env.TENANTS) and
+        # consumed by providers/tenant-provider.tsx. Value is generated from the
+        # SHELL manifest by _Kit tooling — all 13 carry a byte-identical object,
+        # verified by md5 before this file was written, and the line below was
+        # copied programmatically rather than transcribed.
+        # configMapKeyRef is frozen at container start: changing the ConfigMap
+        # needs a rollout restart, not just an apply.
+        - name: TENANTS
+          valueFrom:
+            configMapKeyRef:
+              name: kss-client-web-dms-config
+              key: tenants
+
+        # ── Backend services ────────────────────────────────────────────────
+        # ONE, and only one. services/auth-api.ts:9 reads AUTH_API_BASE_URL and
+        # THROWS if it is unset. DMS calls no other service: there is no
+        # KSS.Service.Dms, and no PERSON / PROJECT / FILE_ORCHESTRATOR /
+        # CASHADVANCE reference exists anywhere in this repo. Adding any of them
+        # here would be the copied-manifest failure in its usual form.
+        - name: AUTH_API_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: kss-client-web-dms-config
+              key: auth-api-base-url
+
+        # ── Object storage ──────────────────────────────────────────────────
+        # Referenced by shared lib code copied in from _Kit (lib/s3-client.ts,
+        # lib/s3-upload.ts). Stated precisely: NOTHING IN THIS APP IMPORTS
+        # EITHER FILE except s3-upload importing s3-client — they are currently
+        # unreachable. Kept for parity with the estate and marked optional, so
+        # an absent secret does not block startup. This app has no upload path.
+        - name: STORAGE_ENDPOINT
+          valueFrom:
+            secretKeyRef: { name: kss-client-web-dms-secrets, key: storage-endpoint, optional: true }
+        - name: STORAGE_REGION
+          valueFrom:
+            secretKeyRef: { name: kss-client-web-dms-secrets, key: storage-region, optional: true }
+        - name: STORAGE_BUCKET
+          valueFrom:
+            secretKeyRef: { name: kss-client-web-dms-secrets, key: storage-bucket, optional: true }
+        - name: STORAGE_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef: { name: kss-client-web-dms-secrets, key: storage-access-key-id, optional: true }
+        - name: STORAGE_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef: { name: kss-client-web-dms-secrets, key: storage-secret-access-key, optional: true }
+        - name: STORAGE_CDN_URL
+          valueFrom:
+            secretKeyRef: { name: kss-client-web-dms-secrets, key: storage-cdn-url, optional: true }
+
+        # 7 pages, no BFF routes, no uploads — the standard zone profile that
+        # 12 of 13 zones carry, NOT CashAdvance's larger one (which is stated
+        # there as being for 49 pages and 34 BFF routes).
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+
+        # ── Probes ──────────────────────────────────────────────────────────
+        # ⚠ THESE DEPEND ON app/api/health/route.ts, WHICH DOES NOT EXIST YET.
+        # See the precondition at the top of this file. timeoutSeconds is
+        # explicit on all three; the default is 1s and a cold start exceeds it.
+        livenessProbe:
+          httpGet: { path: /dms/api/health, port: 3000, scheme: HTTP }
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 5
+        readinessProbe:
+          httpGet: { path: /dms/api/health, port: 3000, scheme: HTTP }
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 3
+        startupProbe:
+          httpGet: { path: /dms/api/health, port: 3000, scheme: HTTP }
+          periodSeconds: 5
+          timeoutSeconds: 5
+          # 24, the value 12 of 13 zones carry - NOT CashAdvance's 36, which
+          # its own file justifies by a 49-page cold start. DMS has 7 pages.
+          failureThreshold: 24
+
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1001
+          runAsGroup: 1001
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop: [ALL]
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kss-client-web-dms-service
+  namespace: kss-client-web-dms
+  labels:
+    app: kss-client-web-dms
+spec:
+  selector:
+    app: kss-client-web-dms
+  ports:
+  - name: http
+    port: 80
+    targetPort: 3000
+    protocol: TCP
+  type: ClusterIP
+  sessionAffinity: None
+---
+# auth-api-base-url copied verbatim from the Shell's kss-client-web-config so
+# the two cannot drift. It is a PUBLIC hostname, matching the Shell exactly —
+# that is the Shell's choice, not a decision taken here.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kss-client-web-dms-config
+  namespace: kss-client-web-dms
+data:
+  auth-api-base-url: "https://auth.api.sebaoffice.ir"
+  tenants: '{"erp.seba.ir":{"name":"SEBA","logo":"/media/app/default-logo.svg","logoDark":"/media/app/default-logo-dark.svg","logoMini":"/media/app/mini-logo.svg","favicon":"/favicon.ico","banner":"/media/images/2600x1600/1.png","bannerDark":"/media/images/2600x1600/1-dark.png","companyId":"019f317a-12ba-764f-b19b-e064e36b4be8","footer":{"brand":{"label":"SEBA","href":"https://seba.ir"},"links":[{"en":"Docs","fa":"مستندات","href":""},{"en":"Purchase","fa":"خرید","href":""},{"en":"FAQ","fa":"سوالات متداول","href":"https://www.seba.ir/%D8%AA%D9%85%D8%A7%D8%B3-%D8%A8%D8%A7-%DA%A9%D8%A7%D9%86%D9%88%D9%86"},{"en":"Support","fa":"پشتیبانی","href":"https://www.seba.ir/%D8%AA%D9%85%D8%A7%D8%B3-%D8%A8%D8%A7-%DA%A9%D8%A7%D9%86%D9%88%D9%86"},{"en":"License","fa":"مجوز","href":""}]}},"members.sebaoffice.ir":{"name":"SEBA","logo":"/media/app/default-logo.svg","logoDark":"/media/app/default-logo-dark.svg","logoMini":"/media/app/mini-logo.svg","favicon":"/favicon.ico","banner":"/media/images/2600x1600/1.png","bannerDark":"/media/images/2600x1600/1-dark.png","companyId":"019f317a-12ba-764f-b19b-e064e36b4be8","footer":{"brand":{"label":"SEBA","href":"https://seba.ir"},"links":[{"en":"Docs","fa":"مستندات","href":""},{"en":"Purchase","fa":"خرید","href":""},{"en":"FAQ","fa":"سوالات متداول","href":"https://www.seba.ir/%D8%AA%D9%85%D8%A7%D8%B3-%D8%A8%D8%A7-%DA%A9%D8%A7%D9%86%D9%88%D9%86"},{"en":"Support","fa":"پشتیبانی","href":"https://www.seba.ir/%D8%AA%D9%85%D8%A7%D8%B3-%D8%A8%D8%A7-%DA%A9%D8%A7%D9%86%D9%88%D9%86"},{"en":"License","fa":"مجوز","href":""}]}},"nerp.sajoffice.ir":{"name":"SAJ","logo":"/media/tenants/saj/logo.svg","logoDark":"/media/tenants/saj/logo-dark.svg","logoMini":"/media/tenants/saj/logo-mini.svg","favicon":"/media/tenants/saj/favicon.svg","banner":"/media/tenants/saj/banner.svg","bannerDark":"/media/tenants/saj/banner-dark.svg","companyId":"019f0e6c-9fbc-78cf-9202-fa932a9878f7","footer":{"brand":{"label":"SAJ","href":""},"links":[{"en":"Docs","fa":"مستندات","href":""},{"en":"Purchase","fa":"خرید","href":""},{"en":"FAQ","fa":"سوالات متداول","href":""},{"en":"Support","fa":"پشتیبانی","href":""},{"en":"License","fa":"مجوز","href":""}]}},"erp.mpfoffice.ir":{"name":"MPF","logo":"/media/tenants/mpf/logo.svg","logoDark":"/media/tenants/mpf/logo-dark.svg","logoMini":"/media/tenants/mpf/logo-mini.svg","favicon":"/media/tenants/mpf/favicon.svg","banner":"/media/tenants/mpf/banner.svg","bannerDark":"/media/tenants/mpf/banner-dark.svg","companyId":"019f7a3e-1d43-7bcb-a7f3-eb97572e2e02","footer":{"brand":{"label":"MPF","href":""},"links":[{"en":"Docs","fa":"مستندات","href":""},{"en":"Purchase","fa":"خرید","href":""},{"en":"FAQ","fa":"سوالات متداول","href":""},{"en":"Support","fa":"پشتیبانی","href":""},{"en":"License","fa":"مجوز","href":""}]}},"spmoffice.ir":{"name":"SPM","logo":"/media/tenants/spm/logo.svg","logoDark":"/media/tenants/spm/logo-dark.svg","logoMini":"/media/tenants/spm/logo-mini.svg","favicon":"/media/tenants/spm/favicon.svg","banner":"/media/tenants/spm/banner.svg","bannerDark":"/media/tenants/spm/banner-dark.svg","companyId":"01a04744-68ae-7aef-b9d0-b5fb31d7a80c","footer":{"brand":{"label":"SPM","href":""},"links":[{"en":"Docs","fa":"مستندات","href":""},{"en":"Purchase","fa":"خرید","href":""},{"en":"FAQ","fa":"سوالات متداول","href":""},{"en":"Support","fa":"پشتیبانی","href":""},{"en":"License","fa":"مجوز","href":""}]}}}'
+---
+# ⚠ `nextauth-secret` IS NOT IN THIS FILE, AND MUST NOT BE ADDED TO IT.
+# See the NEXTAUTH_SECRET note above. Absent + non-optional is the loud
+# failure; empty would be the silent one, and a checked-in key would be
+# re-blanked by every `kubectl apply`.
+#
+# The storage keys below are present-and-empty rather than absent, matching
+# every other zone: each is referenced with `optional: true`, so an empty
+# string is read as an empty string and the unreachable s3 lib never runs.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kss-client-web-dms-secrets
+  namespace: kss-client-web-dms
+type: Opaque
+data:
+  storage-endpoint: ""
+  storage-region: ""
+  storage-bucket: ""
+  storage-access-key-id: ""
+  storage-secret-access-key: ""
+  storage-cdn-url: ""
+---
+# minAvailable 1 against replicas 2 — the profile 12 of 13 zones carry.
+# It must stay strictly below replicas or a drain deadlocks.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: kss-client-web-dms-pdb
+  namespace: kss-client-web-dms
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: kss-client-web-dms
+---
+# Ingress ONLY from the kss-client-web namespace — this is the second half of
+# "the Shell is the only public entrypoint". Without it, the absence of an
+# Ingress object is a routing fact rather than a control: any pod in the
+# cluster could still reach port 3000 directly.
+#
+# Egress is deliberately wide (0.0.0.0/0 on 80/443/8000), matching the estate:
+# AUTH_API_BASE_URL is a PUBLIC hostname, so a namespace-scoped egress rule
+# would break sign-in rather than tighten anything.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: kss-client-web-dms-network-policy
+  namespace: kss-client-web-dms
+spec:
+  podSelector:
+    matchLabels:
+      app: kss-client-web-dms
+  policyTypes: [Ingress, Egress]
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: kss-client-web
+    ports:
+    - protocol: TCP
+      port: 3000
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0
+    ports:
+    - { protocol: TCP, port: 80 }
+    - { protocol: TCP, port: 443 }
+    - { protocol: TCP, port: 8000 }

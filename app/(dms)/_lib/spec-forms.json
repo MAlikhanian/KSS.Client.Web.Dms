@@ -1,0 +1,22 @@
+{
+  "forms": [
+    {
+      "form": "app/(dms)/admin/projects/edit/components/project-form.tsx",
+      "spec": "app/(dms)/_lib/project-fields.ts",
+      "fieldPrefix": "projectField_",
+      "groupPrefix": "projectSection_"
+    },
+    {
+      "form": "app/(dms)/admin/subprojects/edit/components/subproject-form.tsx",
+      "spec": "app/(dms)/_lib/subproject-fields.ts",
+      "fieldPrefix": "subprojectField_",
+      "groupPrefix": "subprojectSection_"
+    },
+    {
+      "form": "app/(dms)/admin/vessels/edit/components/vessel-form.tsx",
+      "spec": "app/(dms)/_lib/vessel-fields.ts",
+      "fieldPrefix": "vesselField_",
+      "groupPrefix": "vesselGroup_"
+    }
+  ]
+}

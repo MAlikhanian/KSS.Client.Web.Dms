@@ -1,0 +1,298 @@
+npm run build
+npm run start
+
+# =============================================================================
+#  DMS — Dredging Management System (شرکت مشیران کاریز)
+#  READ THE FOUR WARNINGS BEFORE RUNNING ANYTHING. Three of them are specific to
+#  this zone and are FALSE for every other zone, which is why they are at the top
+#  rather than inherited from the file you copied to get here.
+# =============================================================================
+
+# ✅ 1. RESOLVED 2026-09-08 — HELD BACK 2026-09-07 TO 2026-09-08, NOW COMPOSED.
+#    WHILE IT HELD, zone:false in domains.json WAS A RULING, NOT AN OVERSIGHT — and
+#    this warning stopped a build order on 2026-09-08: the CTO refused Step 8 on the
+#    strength of this text and was right to. LIFTED on Mohammad's instruction; the row
+#    is now zone: true with a note carrying the same reasoning.
+#    ⚠ WHAT COMPOSITION DID NOT CHANGE, and never will while the code is a mock:
+#    Frontend and mock data only — no database, no backend service (Mohammad, 2026-09-07).
+#    tier stays internal and every figure on the 16 screens is invented. This row must
+#    NEVER become sellable while the code is a mock — that is the CustomerRisk defect
+#    it was written to prevent, and composition did not touch it.
+#
+#    ⓘ THE PROHIBITIONS THAT USED TO SIT HERE ARE SPENT, NOT STILL IN FORCE.
+#    This warning previously read "DO NOT run Step 7. DO NOT add a productionZones
+#    key." Both were run on 2026-09-08 on Mohammad's instruction. productionZones
+#    now carries 13 entries including dms. Recorded rather than deleted so the next
+#    reader can see what was forbidden, by whom, and what lifted it.
+
+# ⛔ 2. THIS ZONE HAS A middleware.ts — THE ONLY ONE IN THE ESTATE EXCEPT THE SHELL.
+#    Every other zone's copy of this file says "no middleware.ts, so direct exposure
+#    gives a rendering page instead of a redirect". THAT SENTENCE IS FALSE HERE.
+#    And the middleware is NOT a reason to expose it. Its own header:
+#      "IT AUTHENTICATES NOTHING. The role is a cookie the browser owns and anyone can set."
+#    So an Ingress on DMS is WORSE than on a zone with none: the guard makes direct
+#    exposure look controlled while the visitor holds the only input it reads.
+#    There is no Ingress in deployment.yaml. That is deliberate.
+
+# ⚠ 3. DATA IS BROWSER localStorage, AND IT IS PER-ORIGIN.
+#    Anything entered at http://localhost:3170 standalone is GONE once the zone is
+#    served under the Shell at /dms — different origin, different store. Tell anyone
+#    testing on dev that their data does not follow them.
+#    NOTE: unlike CustomerRisk, do NOT copy a "SEED_VERSION must stay N" rule here.
+#    DMS version-gates all ten keys with no per-key emptiness guard and its CRUD
+#    screens made every key user-writable, so a bump destroys entered data — and
+#    mock-store.ts advertises the bump as the way to reinstall samples. That is a
+#    DEFECT being fixed (emptiness-guard per key), not a constraint to preserve.
+#    DELETE THIS PARAGRAPH once the guard is in.
+
+# ⛔ 4. RESOLVED 2026-09-08 - app/api/health/route.ts NOW EXISTS (1,509 bytes, app: 'dms').
+#    All 13 deployed zones ship one; the _Kit template ships none, so every zone
+#    authored its own and a new zone starts without it. The probes below will 404,
+#    the pod will CrashLoopBackOff and never go Ready — and it will read as
+#    "the image is broken" rather than "the manifest asked for a route nobody wrote".
+#    This precondition is MET. Left in place, marked resolved, because the reason
+#    it existed is still true for the NEXT new zone: the _Kit template ships no
+#    health route, so every zone starts without one.
+
+# Do NOT use Helper\deployment\build_all.bat — its cd targets point at
+# C:\Source Control\KSS, which does not exist. Build from this directory.
+
+# Step 1: Login to Docker registry
+docker login docker-hosted.sebaoffice.ir
+
+# ⛔ NEXT_PUBLIC_BASE_PATH IS DELIBERATELY NOT PASSED — Dockerfile:22 defaults to "/dms" and is
+#    correct. Passing it from Git Bash mangles it to C:/Program Files/Git/dms and doubles
+#    every URL. See STEP 2a below. If you re-add it, you are re-adding the bug.
+#
+# ⛔ BUILD TO :candidate, NEVER TO :latest. PUSHING :latest IS THE PRODUCTION DEPLOY —
+#    Keel runs policy: force, trigger: poll, match-tag: true on this tag, so the push IS
+#    the release. There is no separate "deploy" action later at which to reconsider.
+#    Promotion is STEP 3, by digest, after 2a and 2b have passed.
+#
+# ⛔ A TAG IS A POINTER, NOT AN IDENTITY — CAPTURE THE CANDIDATE'S DIGEST AT BUILD TIME.
+#    :candidate is STALE until a build overwrites it. Right now it points at the LIVE
+#    image (both are 1f8b1ea0), and the two verification steps below then fail in
+#    OPPOSITE DIRECTIONS — Sydney, 2026-09-09:
+#
+#      STEP 2b fails SAFE and LOUD.  Both tags resolve to the same image, the
+#        discriminator compares an image to itself, the figures come back identical, and
+#        you refuse to promote. Correct outcome, reached by accident.
+#      STEP 2a fails UNSAFE and SILENT.  `Program Files` against :candidate returns 0 —
+#        a genuine pass, measured on PRODUCTION, which was already fixed. You get the
+#        answer you wanted about an image you did not build, and nothing in the output
+#        says which image it measured. It is the most natural invocation there is:
+#        verify the candidate before rebuilding it.
+#
+#    So do not name a tag in a verification. Capture the digest as the build emits it:
+#
+#      R=docker-hosted.sebaoffice.ir/kss-client-web-dms
+#      CAND=$(grep -o 'sha256:[0-9a-f]\{64\}' /tmp/dms-build.json | head -1)  # after the build below
+#      echo "$CAND"                                                       # carry this into 2a/2b/3
+#
+#    A stale tag then becomes a MISMATCH rather than a pass.
+# Step 2: Build the image (basePath comes from the Dockerfile default, NOT from here)
+#   ⚠ The local `docker build` below CANNOT give you a registry digest (--iidfile is a
+#   local image id, a different thing). Anything you intend to PROMOTE goes through the
+#   buildx --push line, which writes the digest to the metadata file.
+docker build --build-arg NEXT_PUBLIC_APP_NAME=KSS_Client_Web_dms -t docker-hosted.sebaoffice.ir/kss-client-web-dms:candidate .
+
+# Build and push the CANDIDATE tag — this is NOT a deploy. --metadata-file is what makes
+# the digest available to every step after it; do not drop it to shorten the command.
+#   ⚠ IT WRITES OUTSIDE THE REPO ON PURPOSE. Dockerfile:18 is `COPY . .`, so a metadata
+#   file left in the build context is uploaded and copied into the builder on the NEXT
+#   build. Keep it in /tmp; do not “tidy” it to a relative path.
+docker buildx build --push --metadata-file /tmp/dms-build.json --build-arg NEXT_PUBLIC_APP_NAME=KSS_Client_Web_dms -t docker-hosted.sebaoffice.ir/kss-client-web-dms:candidate .
+
+# NextAuth: this app does not issue sessions, it decrypts the cookie the Shell issued.
+# nextauth-secret must be byte-identical to the Shell's. deployment.yaml omits the key on
+# purpose — absent + non-optional gives CreateContainerConfigError, so the pod refuses to
+# start until Step 6 runs. An empty value would instead start the pod and 500 every route
+# while the probes keep reporting Ready.
+
+# ═══ STEP 2a — VERIFY THE BUILD INPUTS LANDED. THIS ONE COST A CUSTOMER-FACING BUG. ═══
+#
+#  ⛔ DO NOT PASS --build-arg NEXT_PUBLIC_BASE_PATH FROM GIT BASH.
+#     Dockerfile:22 already defaults to "/dms" and is CORRECT. Passing it is what breaks it.
+#
+#  Git Bash (MSYS) rewrites a bare /dms into a Windows path BEFORE docker sees it:
+#
+#      $ node -e "console.log(process.argv[1])" /dms
+#      C:/Program Files/Git/dms          <- this is what got inlined, four builds running
+#
+#  Consequence, every step visible in the shipped chunk: the inlined value does not start
+#  with "/", so ZoneLink's BASE resolves to ""; BASE falsy takes the zoneSlugs branch;
+#  zoneSlugs is [] because ZoneSlugsProvider is never rendered in a zone; so the href is
+#  passed through UNSTRIPPED and Next's addBasePath prepends /dms again:
+#      /dms/daily-report  ->  /dms/dms/daily-report        on EVERY link at once.
+#
+#  NOTHING IN THE REPOSITORY IS WRONG. Three source-based hypotheses died on this because
+#  the defect exists only in the artefact, injected by the shell that launched the build.
+#
+#  CHECK, one command, with a known-positive control available:
+#      docker run --rm --entrypoint sh <repo>@sha256:<digest> \
+#        -c 'grep -rl "Program Files" /app/.next | head'      # MUST be empty
+#    Control: the same grep against 3338f640 or f4089bd8 FINDS it — so an empty result
+#    means absence rather than a broken grep.
+#
+#  ⚠ THE GENERAL RULE THIS IS AN INSTANCE OF: every check in this file compares the
+#  OUTPUT of a build. Nothing verified its INPUTS. A build argument is an instrument and
+#  it had no control — assert the inlined config is what you meant to pass, not merely
+#  that the new content is present.
+#
+# ═══ STEP 2b — VERIFY THE CANDIDATE AGAINST ITS PREDECESSOR. DO NOT SKIP. ═══
+#
+#  Before promoting anything, grep BOTH the candidate AND the image it replaces for a
+#  string the candidate SHOULD contain and the predecessor SHOULD NOT — and NAME THAT
+#  STRING BEFORE YOU BUILD, so you cannot pick one that flatters the result afterwards.
+#
+#  ⛔ A CHECK THAT RETURNS THE SAME FIGURE FOR BOTH IMAGES IS NOT A CHECK.
+#
+#  Worked example, 2026-09-09, run against f4089bd8 (candidate) and 3338f640 (previous):
+#
+#      DMS-PROVISIONAL-TERM   must be 0     0        0     <- proves NOTHING on its own
+#      «در انتظار بررسی»      DISCRIMINATOR 9        0     <- this is what carries it
+#      «شناورها»              control      15        3
+#      «پرسنل»                control     121       13
+#
+#  The marker row sits under a heading reading "must be 0" and returns 0. It reads as a
+#  pass and it is uninformative — it is 0 in BOTH. Only the discriminator distinguishes
+#  the two images, and the two controls prove the instrument can read Persian out of
+#  either filesystem, so a zero means absence rather than a broken grep.
+#
+#  WHY THIS IS A STEP AND NOT ADVICE: on 2026-09-09 a candidate was nearly promoted on a
+#  check that returned 3 files for both images — the strings lived in the translation map,
+#  which the change did not touch. It was caught only because the same query was run
+#  against the predecessor IN THE SAME COMMAND. Written here rather than relied on as
+#  judgement, because the person building next will not have that morning in mind.
+#
+#  docker run --rm --entrypoint sh <repo>@sha256:<digest> -c 'grep -roh "<string>" /app | wc -l'
+#
+# ═══ STEP 3 — PROMOTE. TAG THE OUTGOING IMAGE FIRST, AND LABEL WHAT IT WOULD REINTRODUCE. ═══
+#
+#  ⛔ RECORD THE OUTGOING DIGEST BEFORE ANYTHING ELSE. Once :latest moves, no command
+#     tells you what it used to be.
+#
+#      R=docker-hosted.sebaoffice.ir/kss-client-web-dms
+#      docker buildx imagetools inspect $R:latest    --format '{{.Manifest.Digest}}'   # outgoing
+#      docker buildx imagetools inspect $R:candidate --format '{{.Manifest.Digest}}'   # incoming
+#
+#  1. Tag the OUTGOING image as a dated rollback point:
+#       docker buildx imagetools create -t $R:rollback-YYYYMMDD[a-z] $R@sha256:<outgoing>
+#  2. Run STEP 2a and STEP 2b against $R@sha256:<incoming>. Against the DIGEST, not a tag.
+#  3. Promote, by digest:
+#       docker buildx imagetools create -t $R:latest $R@sha256:<incoming>
+#       docker buildx imagetools inspect $R:latest --format '{{.Manifest.Digest}}'   # MUST equal <incoming>
+#
+#  ⚠ imagetools create DOES NOT MOVE LOCAL TAGS. After promoting, your local :latest is
+#    still the OLD image. Comparing against it reports zero differences and reads as
+#    thorough. Every post-promotion check goes by digest.
+#
+#  ⛔ WRITE WHAT EACH ROLLBACK TAG WOULD REINTRODUCE — Harper, 2026-09-09:
+#     "A rollback point whose defect is not written beside it is a trap: it is the one
+#      someone reaches for under pressure, and its digest alone says nothing about what
+#      rolling back would reintroduce."
+#     Under pressure nobody re-derives what a digest contained — they take the most recent
+#     tag that is not the current one. Here that is rollback-20260909d: the newest, and the
+#     one carrying the URL-doubling bug. A digest is not a description.
+#
+#     VERIFIED AGAINST THE REGISTRY 2026-09-09:
+#       latest              1f8b1ea0   LIVE — basePath fixed, 476 keys, menu + shifts/roles
+#       candidate           1f8b1ea0   = latest. Stale until the next build overwrites it.
+#       rollback-20260909d  f4089bd8   ⛔ MANGLED basePath — EVERY URL DOUBLES. 322 keys.
+#       rollback-20260909c  3338f640   pre-translation (menu categories 1+2 only)
+#       rollback-20260909b  3f85512a   menu removal only
+#       rollback-20260909   2fcb7986   pre-everything
+#
+# THE UNGATED PATH, kept visible rather than deleted — this is what this file said for its
+# whole life, and it is how four images reached production today with no rollback point and
+# no verified digest. Step 2 now tags :candidate, so this line no longer has a subject.
+#   docker push docker-hosted.sebaoffice.ir/kss-client-web-dms:latest
+
+# Step 4: Create secrets (first time only — copy nextauth-secret from the Shell, do not invent one)
+#   kubectl create secret generic kss-client-web-dms-secrets -n kss-client-web-dms \
+#     --from-literal=nextauth-secret="$(kubectl get secret kss-client-web-secrets -n kss-client-web -o jsonpath='{.data.nextauth-secret}' | base64 -d)" \
+#     --dry-run=client -o yaml | kubectl apply -f -
+
+# ⛔⛔ STOP — 2026-09-09. DO NOT RUN STEP 5 AS WRITTEN. IT WOULD BREAK DNS. ⛔⛔
+#
+#  deployment.yaml contains a NetworkPolicy whose egress is TCP 80/443/8000 ONLY.
+#  **DNS IS UDP 53 AND IS NOT IN THAT LIST.** Applying it costs these pods name
+#  resolution and with it kss-auth-service. Sign-in stops. The pods stay Running and
+#  READY — the readiness probe hits /dms/api/health, which resolves nothing external —
+#  so it fails as a CUSTOMER SYMPTOM against a green cluster.
+#
+#  NO ZONE HAS A NETWORKPOLICY IN PRODUCTION TODAY. Nothing is broken. The danger is
+#  entirely that this step LOOKS ROUTINE, and its own comment below lists NetworkPolicy
+#  by name as something it applies.
+#
+#  ⚠ WHY THIS WARNING IS HERE AND NOT ONLY IN deployment.yaml: the manifest carries the
+#  same warning at its NetworkPolicy block — 400 lines into a file the operator running
+#  this runbook is not reading. I wrote that warning and left THIS file saying "apply
+#  it", by name, with no caveat. Two files that disagree, and the one you are looking
+#  at was the wrong one. A removal condition in a comment nobody opens is not a control.
+#
+#  ⚠ THERE IS A REAL PENDING MANIFEST CHANGE AND THIS IS THE ONLY COMMAND THAT SHIPS IT:
+#  the mkoffice.ir tenant row (مشیران کاریز, companyId 01a07fb0-…) is in this file and
+#  NOT in the running ConfigMap. So the one thing worth applying can only be delivered
+#  by the one command that also applies the NetworkPolicy. Do not split the difference
+#  by hand under time pressure — it is Amanda's, as cluster configuration.
+#
+#  Build, push, and Step 7 (rollout restart) DO NOT touch manifests. If that is all you
+#  are doing, there is no hazard here and the MK tenant simply stays unapplied.
+#
+#  Found by Amanda on Mpf via kubectl diff, before applying. Runbook/manifest conflict
+#  found by Sydney. — Christina
+#
+# Step 5: Apply manifests (Namespace + Deployment + Service + ConfigMap + Secret + PDB + NetworkPolicy)
+# EXPECTED: pods will NOT start yet — nextauth-secret is deliberately absent until Step 6.
+kubectl apply -f deployment.yaml
+
+# Step 6: NEXTAUTH_SECRET — copy it across, do not read it, retype it or generate one
+kubectl patch secret kss-client-web-dms-secrets -n kss-client-web-dms -p "{\"data\":{\"nextauth-secret\":\"$(kubectl get secret kss-client-web-secrets -n kss-client-web -o jsonpath='{.data.nextauth-secret}')\"}}"
+# Verify the two print IDENTICAL strings:
+#   kubectl get secret kss-client-web-secrets     -n kss-client-web     -o jsonpath='{.data.nextauth-secret}'
+#   kubectl get secret kss-client-web-dms-secrets -n kss-client-web-dms -o jsonpath='{.data.nextauth-secret}'
+
+# Step 7: Restart so pods pick up ConfigMap/Secret changes
+kubectl rollout restart deployment/kss-client-web-dms -n kss-client-web-dms
+kubectl rollout status  deployment/kss-client-web-dms -n kss-client-web-dms
+
+# ✅ Step 8: RUN 2026-09-08. Previously "⛔ DO NOT RUN" — see warning 1.
+#    This is the line that composed the zone into the Shell. Amanda added the key on
+#    Mohammad's instruction; he applies the Shell himself. The Shell's zones value
+#    now carries 13 keys including dms. Kept verbatim as the record of what was run.
+#      ZONES={"dms":"http://kss-client-web-dms-service.kss-client-web-dms.svc.cluster.local"}
+#      kubectl rollout restart deployment/kss-client-web -n kss-client-web
+
+# Step 9: Verify the zone hop — only AFTER step 8 is authorised and run
+#   200 = the Shell is proxying here.  404 = ZONES is not in effect.
+#   curl -s -o /dev/null -w "%{http_code}\n" https://erp.seba.ir/dms/api/health
+
+# Create docker-registry secret (first time only)
+# Secrets are namespace-scoped — the one in kss-client-web does NOT carry over.
+kubectl create secret docker-registry docker-secret \
+  --docker-server=docker-hosted.sebaoffice.ir \
+  --docker-username=YOUR_USERNAME \
+  --docker-password=YOUR_PASSWORD \
+  --namespace kss-client-web-dms
+
+# Useful diagnostic commands
+kubectl get pods       -n kss-client-web-dms
+kubectl get secrets    -n kss-client-web-dms
+kubectl get configmaps -n kss-client-web-dms
+kubectl get svc        -n kss-client-web-dms
+kubectl get pdb        -n kss-client-web-dms
+
+# This zone has NO public entrypoint, so there is nothing to check for ingress,
+# certificate, pvc or hpa — those do not exist in this namespace BY DESIGN, not by
+# omission. Do not add them to "make it match" another zone.
+
+# Check pod env (confirm NEXTAUTH_SECRET is populated and basePath is /dms)
+kubectl exec -n kss-client-web-dms deploy/kss-client-web-dms -- env | findstr NEXT
+
+# In-cluster reachability (bypasses the Shell entirely)
+kubectl run -n kss-client-web-dms tmp-curl --rm -it --image=curlimages/curl --restart=Never -- curl -s -o /dev/null -w "%{http_code}\n" http://kss-client-web-dms-service.kss-client-web-dms.svc.cluster.local/dms/api/health
+
+# Remove resources if needed
+kubectl delete networkpolicy kss-client-web-dms-network-policy -n kss-client-web-dms
+kubectl delete secrets docker-secret -n kss-client-web-dms

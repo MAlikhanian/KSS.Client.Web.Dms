@@ -1,0 +1,122 @@
+npm run build
+npm run start
+
+# =============================================================================
+#  DMS — Dredging Management System (شرکت مشیران کاریز)
+#  READ THE FOUR WARNINGS BEFORE RUNNING ANYTHING. Three of them are specific to
+#  this zone and are FALSE for every other zone, which is why they are at the top
+#  rather than inherited from the file you copied to get here.
+# =============================================================================
+
+# ⛔ 1. THIS ZONE IS HELD BACK. zone:false IN domains.json IS A RULING, NOT AN OVERSIGHT.
+#    Frontend and mock data only — no database, no backend service (Mohammad, 2026-09-07).
+#    DO NOT run Step 7. DO NOT add a productionZones key. Composing a mock into the
+#    Shell for real tenants is the CustomerRisk defect and the reason the row exists.
+#    Everything below is how to deploy it WHEN that ruling changes, not permission to.
+
+# ⛔ 2. THIS ZONE HAS A middleware.ts — THE ONLY ONE IN THE ESTATE EXCEPT THE SHELL.
+#    Every other zone's copy of this file says "no middleware.ts, so direct exposure
+#    gives a rendering page instead of a redirect". THAT SENTENCE IS FALSE HERE.
+#    And the middleware is NOT a reason to expose it. Its own header:
+#      "IT AUTHENTICATES NOTHING. The role is a cookie the browser owns and anyone can set."
+#    So an Ingress on DMS is WORSE than on a zone with none: the guard makes direct
+#    exposure look controlled while the visitor holds the only input it reads.
+#    There is no Ingress in deployment.yaml. That is deliberate.
+
+# ⚠ 3. DATA IS BROWSER localStorage, AND IT IS PER-ORIGIN.
+#    Anything entered at http://localhost:3170 standalone is GONE once the zone is
+#    served under the Shell at /dms — different origin, different store. Tell anyone
+#    testing on dev that their data does not follow them.
+#    NOTE: unlike CustomerRisk, do NOT copy a "SEED_VERSION must stay N" rule here.
+#    DMS version-gates all ten keys with no per-key emptiness guard and its CRUD
+#    screens made every key user-writable, so a bump destroys entered data — and
+#    mock-store.ts advertises the bump as the way to reinstall samples. That is a
+#    DEFECT being fixed (emptiness-guard per key), not a constraint to preserve.
+#    DELETE THIS PARAGRAPH once the guard is in.
+
+# ⛔ 4. PRECONDITION — app/api/health/route.ts DOES NOT EXIST IN THIS ZONE YET.
+#    All 13 deployed zones ship one; the _Kit template ships none, so every zone
+#    authored its own and a new zone starts without it. The probes below will 404,
+#    the pod will CrashLoopBackOff and never go Ready — and it will read as
+#    "the image is broken" rather than "the manifest asked for a route nobody wrote".
+#    DO NOT DEPLOY UNTIL THAT ROUTE EXISTS.
+
+# Do NOT use Helper\deployment\build_all.bat — its cd targets point at
+# C:\Source Control\KSS, which does not exist. Build from this directory.
+
+# Step 1: Login to Docker registry
+docker login docker-hosted.sebaoffice.ir
+
+# Step 2: Build the image (basePath so assets resolve under /dms)
+docker build --build-arg NEXT_PUBLIC_BASE_PATH=/dms --build-arg NEXT_PUBLIC_APP_NAME=KSS_Client_Web_dms -t docker-hosted.sebaoffice.ir/kss-client-web-dms:latest .
+
+# Alternative: build and push in one command
+docker buildx build --push --build-arg NEXT_PUBLIC_BASE_PATH=/dms --build-arg NEXT_PUBLIC_APP_NAME=KSS_Client_Web_dms -t docker-hosted.sebaoffice.ir/kss-client-web-dms:latest .
+
+# NextAuth: this app does not issue sessions, it decrypts the cookie the Shell issued.
+# nextauth-secret must be byte-identical to the Shell's. deployment.yaml omits the key on
+# purpose — absent + non-optional gives CreateContainerConfigError, so the pod refuses to
+# start until Step 6 runs. An empty value would instead start the pod and 500 every route
+# while the probes keep reporting Ready.
+
+# Step 3: Push
+docker push docker-hosted.sebaoffice.ir/kss-client-web-dms:latest
+
+# Step 4: Create secrets (first time only — copy nextauth-secret from the Shell, do not invent one)
+#   kubectl create secret generic kss-client-web-dms-secrets -n kss-client-web-dms \
+#     --from-literal=nextauth-secret="$(kubectl get secret kss-client-web-secrets -n kss-client-web -o jsonpath='{.data.nextauth-secret}' | base64 -d)" \
+#     --dry-run=client -o yaml | kubectl apply -f -
+
+# Step 5: Apply manifests (Namespace + Deployment + Service + ConfigMap + Secret + PDB + NetworkPolicy)
+# EXPECTED: pods will NOT start yet — nextauth-secret is deliberately absent until Step 6.
+kubectl apply -f deployment.yaml
+
+# Step 6: NEXTAUTH_SECRET — copy it across, do not read it, retype it or generate one
+kubectl patch secret kss-client-web-dms-secrets -n kss-client-web-dms -p "{\"data\":{\"nextauth-secret\":\"$(kubectl get secret kss-client-web-secrets -n kss-client-web -o jsonpath='{.data.nextauth-secret}')\"}}"
+# Verify the two print IDENTICAL strings:
+#   kubectl get secret kss-client-web-secrets     -n kss-client-web     -o jsonpath='{.data.nextauth-secret}'
+#   kubectl get secret kss-client-web-dms-secrets -n kss-client-web-dms -o jsonpath='{.data.nextauth-secret}'
+
+# Step 7: Restart so pods pick up ConfigMap/Secret changes
+kubectl rollout restart deployment/kss-client-web-dms -n kss-client-web-dms
+kubectl rollout status  deployment/kss-client-web-dms -n kss-client-web-dms
+
+# ⛔ Step 8: DO NOT RUN — Shell ZONES entry. See warning 1.
+#    This is the line that composes the zone into the Shell for real tenants.
+#    It is recorded so that whoever is authorised to run it does not have to
+#    reconstruct it, NOT because it is a step in this deployment.
+#      ZONES={"dms":"http://kss-client-web-dms-service.kss-client-web-dms.svc.cluster.local"}
+#      kubectl rollout restart deployment/kss-client-web -n kss-client-web
+
+# Step 9: Verify the zone hop — only AFTER step 8 is authorised and run
+#   200 = the Shell is proxying here.  404 = ZONES is not in effect.
+#   curl -s -o /dev/null -w "%{http_code}\n" https://erp.seba.ir/dms/api/health
+
+# Create docker-registry secret (first time only)
+# Secrets are namespace-scoped — the one in kss-client-web does NOT carry over.
+kubectl create secret docker-registry docker-secret \
+  --docker-server=docker-hosted.sebaoffice.ir \
+  --docker-username=YOUR_USERNAME \
+  --docker-password=YOUR_PASSWORD \
+  --namespace kss-client-web-dms
+
+# Useful diagnostic commands
+kubectl get pods       -n kss-client-web-dms
+kubectl get secrets    -n kss-client-web-dms
+kubectl get configmaps -n kss-client-web-dms
+kubectl get svc        -n kss-client-web-dms
+kubectl get pdb        -n kss-client-web-dms
+
+# This zone has NO public entrypoint, so there is nothing to check for ingress,
+# certificate, pvc or hpa — those do not exist in this namespace BY DESIGN, not by
+# omission. Do not add them to "make it match" another zone.
+
+# Check pod env (confirm NEXTAUTH_SECRET is populated and basePath is /dms)
+kubectl exec -n kss-client-web-dms deploy/kss-client-web-dms -- env | findstr NEXT
+
+# In-cluster reachability (bypasses the Shell entirely)
+kubectl run -n kss-client-web-dms tmp-curl --rm -it --image=curlimages/curl --restart=Never -- curl -s -o /dev/null -w "%{http_code}\n" http://kss-client-web-dms-service.kss-client-web-dms.svc.cluster.local/dms/api/health
+
+# Remove resources if needed
+kubectl delete networkpolicy kss-client-web-dms-network-policy -n kss-client-web-dms
+kubectl delete secrets docker-secret -n kss-client-web-dms
