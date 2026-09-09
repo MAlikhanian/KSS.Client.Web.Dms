@@ -11,17 +11,17 @@ npm run start
 # ✅ 1. RESOLVED 2026-09-08 — HELD BACK 2026-09-07 TO 2026-09-08, NOW COMPOSED.
 #    WHILE IT HELD, zone:false in domains.json WAS A RULING, NOT AN OVERSIGHT — and
 #    this warning stopped a build order on 2026-09-08: the CTO refused Step 8 on the
-#    strength of this text and was right to. LIFTED on Mohammad's instruction; the row
+#    strength of this text and was right to. LIFTED on the owner's instruction; the row
 #    is now zone: true with a note carrying the same reasoning.
 #    ⚠ WHAT COMPOSITION DID NOT CHANGE, and never will while the code is a mock:
-#    Frontend and mock data only — no database, no backend service (Mohammad, 2026-09-07).
+#    Frontend and mock data only — no database, no backend service (owner's ruling, 2026-09-07).
 #    tier stays internal and every figure on the 16 screens is invented. This row must
 #    NEVER become sellable while the code is a mock — that is the CustomerRisk defect
 #    it was written to prevent, and composition did not touch it.
 #
 #    ⓘ THE PROHIBITIONS THAT USED TO SIT HERE ARE SPENT, NOT STILL IN FORCE.
 #    This warning previously read "DO NOT run Step 7. DO NOT add a productionZones
-#    key." Both were run on 2026-09-08 on Mohammad's instruction. productionZones
+#    key." Both were run on 2026-09-08 on the owner's instruction. productionZones
 #    now carries 13 entries including dms. Recorded rather than deleted so the next
 #    reader can see what was forbidden, by whom, and what lifted it.
 
@@ -72,7 +72,7 @@ docker login docker-hosted.sebaoffice.ir
 # ⛔ A TAG IS A POINTER, NOT AN IDENTITY — CAPTURE THE CANDIDATE'S DIGEST AT BUILD TIME.
 #    :candidate is STALE until a build overwrites it. Right now it points at the LIVE
 #    image (both are 1f8b1ea0), and the two verification steps below then fail in
-#    OPPOSITE DIRECTIONS — Sydney, 2026-09-09:
+#    OPPOSITE DIRECTIONS:
 #
 #      STEP 2b fails SAFE and LOUD.  Both tags resolve to the same image, the
 #        discriminator compares an image to itself, the figures come back identical, and
@@ -147,6 +147,23 @@ docker buildx build --push --metadata-file /tmp/dms-build.json --build-arg NEXT_
 #
 #  ⛔ A CHECK THAT RETURNS THE SAME FIGURE FOR BOTH IMAGES IS NOT A CHECK.
 #
+#  ⛔ AND A DIFFERENCE WITH NOTHING TO VALIDATE IT IS NOT A CHECK EITHER. You need BOTH
+#     VARIATION and a CONTROL — either alone is a number that looks like a finding.
+#     2026-09-09, both halves failed in one evening: a provider sweep returned "not mounted"
+#     in EVERY zone (control, no variation — indistinguishable from a universal defect), and
+#     a <title> comparison between two zones differed for a reason that had nothing to do
+#     with the change (variation, no control). The second was put in a definition of done
+#     and would have FAILED after a correct fix.
+#
+#  ⭐ PREFER A PEER ZONE THAT ALREADY EXHIBITS THE PROPERTY AS THE POSITIVE CONTROL.
+#     A predecessor at 0 says the string is absent NOW; it cannot tell absent from "my grep
+#     cannot see it". A zone where the feature already works proves the string DOES appear:
+#         anonymous mkoffice.ir/spm   grep -c "/media/tenants/mk/"  ->  8   (works here)
+#         anonymous mkoffice.ir/dms   same grep                     ->  0   (the defect)
+#     Sixteen zones are sixteen naturally-occurring controls. It costs nothing, creates no
+#     artefact in the tree and leaves nothing to delete — which matters while DMS has no
+#     version control and nothing may be cleaned up.
+#
 #  Worked example, 2026-09-09, run against f4089bd8 (candidate) and 3338f640 (previous):
 #
 #      DMS-PROVISIONAL-TERM   must be 0     0        0     <- proves NOTHING on its own
@@ -187,10 +204,10 @@ docker buildx build --push --metadata-file /tmp/dms-build.json --build-arg NEXT_
 #    still the OLD image. Comparing against it reports zero differences and reads as
 #    thorough. Every post-promotion check goes by digest.
 #
-#  ⛔ WRITE WHAT EACH ROLLBACK TAG WOULD REINTRODUCE — Harper, 2026-09-09:
-#     "A rollback point whose defect is not written beside it is a trap: it is the one
-#      someone reaches for under pressure, and its digest alone says nothing about what
-#      rolling back would reintroduce."
+#  ⛔ WRITE WHAT EACH ROLLBACK TAG WOULD REINTRODUCE.
+#     A rollback point whose defect is not written beside it is a trap: it is the one
+#     someone reaches for under pressure, and its digest alone says nothing about what
+#     rolling back would reintroduce.
 #     Under pressure nobody re-derives what a digest contained — they take the most recent
 #     tag that is not the current one. Here that is rollback-20260909d: the newest, and the
 #     one carrying the URL-doubling bug. A digest is not a description.
@@ -208,6 +225,35 @@ docker buildx build --push --metadata-file /tmp/dms-build.json --build-arg NEXT_
 # no verified digest. Step 2 now tags :candidate, so this line no longer has a subject.
 #   docker push docker-hosted.sebaoffice.ir/kss-client-web-dms:latest
 
+# ═══ STEP 3b — IS IT SERVING? PROMOTED IS NOT LIVE. NO CLUSTER ACCESS NEEDED. ═══
+#
+#  Keel POLLS. After a promote the pods keep serving the old image for a while, and a
+#  customer-vantage check run too early returns the OLD answer — which is indistinguishable
+#  from a fix that did not work. 2026-09-09: the tenant check read 0 four minutes before the
+#  pods rolled, and read 6 afterwards. Same command, same URL, opposite conclusions.
+#
+#  Next writes a BUILD_ID per build and it reaches the served page. Get it from BOTH images
+#  and grep the page for each LITERAL:
+#
+#      docker run --rm --entrypoint sh <repo>@sha256:<candidate> -c 'cat /app/.next/BUILD_ID'
+#      docker run --rm --entrypoint sh <repo>@sha256:<previous>  -c 'cat /app/.next/BUILD_ID'
+#      curl -s https://<host>/<zone> | grep -c '<each id>'
+#
+#      candidate id present  -> ROLLED. A failing check now is a real failure.
+#      previous  id present  -> NOT ROLLED. Wait; the check means nothing yet.
+#      neither present       -> the id is not in this page; technique does not apply here.
+#
+#  ⛔ DO NOT EXTRACT A PATH SEGMENT. The BUILD_ID names the static directory IN THE IMAGE
+#  but does NOT appear that way in the HTML — the only _next/static/<x>/ segments are
+#  chunks/ and css/. `grep -o "_next/static/[^/]*/" | head -1` returns "_next/static/css/",
+#  WHICH LOOKS EXACTLY LIKE AN ANSWER, and returns it for a control zone too, so running it
+#  against a known-good page does not catch it. Two known literals validate each other;
+#  a parse of an unknown does not.
+#
+#  ⚠ AND KEEP THE TWO SENTENCES APART: "the assets are served" is ours and verifiable.
+#  "the customer sees the right thing" is his. Merging them is how a menu fix was reported
+#  done on an image built thirty minutes before the edit.
+#
 # Step 4: Create secrets (first time only — copy nextauth-secret from the Shell, do not invent one)
 #   kubectl create secret generic kss-client-web-dms-secrets -n kss-client-web-dms \
 #     --from-literal=nextauth-secret="$(kubectl get secret kss-client-web-secrets -n kss-client-web -o jsonpath='{.data.nextauth-secret}' | base64 -d)" \
@@ -235,13 +281,13 @@ docker buildx build --push --metadata-file /tmp/dms-build.json --build-arg NEXT_
 #  the mkoffice.ir tenant row (مشیران کاریز, companyId 01a07fb0-…) is in this file and
 #  NOT in the running ConfigMap. So the one thing worth applying can only be delivered
 #  by the one command that also applies the NetworkPolicy. Do not split the difference
-#  by hand under time pressure — it is Amanda's, as cluster configuration.
+#  by hand under time pressure — it is a cluster-configuration change and is owned there.
 #
 #  Build, push, and Step 7 (rollout restart) DO NOT touch manifests. If that is all you
 #  are doing, there is no hazard here and the MK tenant simply stays unapplied.
 #
-#  Found by Amanda on Mpf via kubectl diff, before applying. Runbook/manifest conflict
-#  found by Sydney. — Christina
+#  The NetworkPolicy egress gap was found on another zone via `kubectl diff` before
+#  applying; the runbook/manifest conflict was found by review of both files together.
 #
 # Step 5: Apply manifests (Namespace + Deployment + Service + ConfigMap + Secret + PDB + NetworkPolicy)
 # EXPECTED: pods will NOT start yet — nextauth-secret is deliberately absent until Step 6.
@@ -258,8 +304,8 @@ kubectl rollout restart deployment/kss-client-web-dms -n kss-client-web-dms
 kubectl rollout status  deployment/kss-client-web-dms -n kss-client-web-dms
 
 # ✅ Step 8: RUN 2026-09-08. Previously "⛔ DO NOT RUN" — see warning 1.
-#    This is the line that composed the zone into the Shell. Amanda added the key on
-#    Mohammad's instruction; he applies the Shell himself. The Shell's zones value
+#    This is the line that composed the zone into the Shell. The key was added under
+#    the owner's instruction; the Shell is applied separately by its owner. The Shell's zones value
 #    now carries 13 keys including dms. Kept verbatim as the record of what was run.
 #      ZONES={"dms":"http://kss-client-web-dms-service.kss-client-web-dms.svc.cluster.local"}
 #      kubectl rollout restart deployment/kss-client-web -n kss-client-web

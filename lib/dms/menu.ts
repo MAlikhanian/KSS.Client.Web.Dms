@@ -52,7 +52,7 @@
 import type { DmsRole } from './types';
 
 /**
- * The heading Amir asked for (msg 204), under which the nine entries below are
+ * The heading the customer specified, under which the nine entries below are
  * nested. **A DELIBERATE ONE-CHARACTER DEPARTURE FROM WHAT HE TYPED.**
  *
  * ─── HIS INPUT, AND OURS ────────────────────────────────────────────────────
@@ -82,7 +82,7 @@ import type { DmsRole } from './types';
  *
  * ─── PROVENANCE, SO A DECISION IS NOT MISTAKEN FOR AN ACCIDENT ──────────────
  * His raw bytes are preserved, never retyped at any hop on our side:
- *   C:/KSS/AI/Agent/Caroline/docs/2026-09-08-amir-msg204-menu-title-raw.txt
+ *   (held verbatim in the customer-communications record, outside this repo)
  *   sha256 efd1923aaa6111c3f2496018a355d4a1192aebd2a73081b700c1e0285a2c8e83
  *
  * The value below was EXTRACTED from that file programmatically and the single
@@ -183,7 +183,7 @@ export interface DmsMenuEntry {
   dmsRoles: readonly DmsRole[];
 }
 
-/** FRD §1 role → screen mapping. */
+/** Role → screen mapping, per the customer's specification. */
 export const DMS_MENU_ENTRIES: readonly DmsMenuEntry[] = [
   {
     path: '/dms',
@@ -246,15 +246,15 @@ export const DMS_MENU_ENTRIES: readonly DmsMenuEntry[] = [
     dmsRoles: ['ProjectControl'],
   },
   {
-    // FRD «شیفت» — the shift reference table, unnumbered under ۲-۶. He
-    // populates it; «مثال: روز، شب» marks the seeded rows as examples.
+    // «شیفت» — the shift reference table, unnumbered in the customer's
+    // specification. The customer populates it; «مثال: روز، شب» marks the seeded rows as examples.
     path: '/dms/admin/shifts',
     title: 'Shifts',
     titleKey: 'menuShifts',
     dmsRoles: ['ProjectControl'],
   },
   {
-    // FRD «نقش‌های پروژه (جدول یا لیست مرجع)» — READ-ONLY. The seven roles are
+    // «نقش‌های پروژه (جدول یا لیست مرجع)» — READ-ONLY. The seven roles are
     // model, not store: DmsPersonnelAssignment.roleId is typed against them.
     path: '/dms/admin/project-roles',
     title: 'Project Roles',
@@ -262,14 +262,14 @@ export const DMS_MENU_ENTRIES: readonly DmsMenuEntry[] = [
     dmsRoles: ['ProjectControl'],
   },
   {
-    // ۲-۵ مشخصات پرسنل — the master table the ۲-۶ assignments reference.
+    // مشخصات پرسنل — the master table the personnel assignments reference.
     path: '/dms/admin/personnel',
     title: 'Personnel',
     titleKey: 'menuPersonnel',
     dmsRoles: ['ProjectControl'],
   },
   {
-    // ۲-۶ تخصیص پرسنل به پروژه‌ها. Prefixed like the rest — see the note on
+    // تخصیص پرسنل به پروژه‌ها. Prefixed like the rest — see the note on
     // `path` above; a bare '/admin/personnel-assignments' here would take
     // ZoneLink's cross-app branch and 404, exactly as all nine did.
     path: '/dms/admin/personnel-assignments',

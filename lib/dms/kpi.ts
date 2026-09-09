@@ -552,7 +552,7 @@ export function computeKpis(input: {
             value: totals.roundTripMinutes / totals.cycleCount,
             unit: 'minutes',
             basis:
-              'The full round trip — from the start of dredging until the vessel is back at the dredging site (۲-۸ «زمان رسیدن به محل لایروبی») — ÷ number of cycles. NOT the sum of the four operational phases: this INCLUDES the idle time between phases, which T_OP excludes. The two differ by exactly those gaps.',
+              'The full round trip — from the start of dredging until the vessel is back at the dredging site — ÷ number of cycles. Includes the idle time between phases.',
           }
         : {
             kind: 'not-applicable',
@@ -571,7 +571,7 @@ export function computeKpis(input: {
             value: totals.dredgedVolumeM3 / totals.reportCount,
             unit: 'm³ per report',
             basis:
-              'Total dredged volume ÷ the number of APPROVED DAILY REPORTS — the customer’s own definition (msg 194), and not a count of calendar days. Under ۲-۴’s one-vessel-per-project rule these coincide today; the divisor is reports because that is what was specified.',
+              'Total dredged volume ÷ number of approved daily reports.',
           }
         : {
             kind: 'not-applicable',
@@ -612,7 +612,7 @@ export function computeKpis(input: {
     // he can answer in one word without knowing anything about our internals.
     availabilityPercent: percentOfDay(totals.operatingMinutes, dayMinutes, {
       basis:
-        'Average working time read as T_OP — the four ۲-۸ phases (dredging, transport, discharge, return) — ÷ 1440 minutes per approved report (one 24-hour day each). NOT 1440 minus all stoppages, and not T_AV. The denominator is the customer’s (a single 24-hour shift); the numerator is our reading, because “average working time” is not a term the FRD defines.',
+        'Operating time — dredging, transport, discharge and return — ÷ 1440 minutes per approved report (one 24-hour day each).',
     }),
 
     // ⚠ SPLIT BY CATEGORY ON OUR READING, NOT HIS INSTRUCTION.
@@ -635,7 +635,7 @@ export function computeKpis(input: {
       dayMinutes,
       {
         basis:
-          'Stoppage minutes in the Technical CATEGORY ÷ 1440 minutes per approved report (one 24-hour day each). Note this is category-based, while T_PD and T_UPD are is_planned-based — the two are different fields in ۲-۹ and need not agree, so the percentages here do not sum to total downtime.',
+          'Stoppage minutes in the Technical category ÷ 1440 minutes per approved report (one 24-hour day each). Category-based, so technical and operational downtime do not add up to total downtime.',
       },
     ),
     operationalDowntimePercent: percentOfDay(
@@ -657,7 +657,7 @@ export function computeKpis(input: {
       dayMinutes,
       {
         basis:
-          'Time in the day recorded NEITHER as an operating phase (۲-۸) NOR as a stoppage (۲-۹). This is a gap in what was logged, not a discrepancy in the calculation: availability and downtime are not expected to sum to 100% under the reading shipped, and this is what the remainder consists of.',
+          'Time in the day recorded neither as an operating phase nor as a stoppage. This is a gap in what was logged, not a discrepancy in the calculation.',
       },
     ),
 

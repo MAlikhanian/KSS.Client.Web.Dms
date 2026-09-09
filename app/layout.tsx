@@ -3,6 +3,9 @@ import { Metadata } from 'next';
 import { cn } from '@/lib/utils';
 import { AuthProvider } from '@/providers/auth-provider';
 import { I18nProvider } from '@/providers/i18n-provider';
+import { headers } from 'next/headers';
+import { resolveTenant, tenantAssets } from '@/lib/tenants';
+import { TenantProvider } from '@/providers/tenant-provider';
 import { ModulesProvider } from '@/providers/modules-provider';
 import { QueryProvider } from '@/providers/query-provider';
 import { SettingsProvider } from '@/providers/settings-provider';
@@ -78,7 +81,35 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+/**
+ * The tenant hostname this request arrived on.
+ *
+ * x-kss-host ONLY, and deliberately no fallback. The Shell’s middleware stamps
+ * it as an unconditional overwrite from the real Host header. A zone must never
+ * read x-forwarded-host or any other client-settable header, because the
+ * resolved tenant carries companyId, which decides the x-company-id cookie.
+ *
+ * CONSEQUENCE, AND IT IS INTENDED: opening this app DIRECTLY on its own dev
+ * port carries no stamp, so it renders the default branding — never a tenant
+ * logo or tenant footer. Tenant branding is visible only through the Shell,
+ * which stamps the header in dev exactly as in cluster. Do NOT "fix" that by
+ * adding a fallback: putting a client-settable source back into tenant
+ * resolution is the whole thing this prevents.
+ *
+ * ⚠ WHY THIS ARRIVED LATE. The _Kit scaffold never mounts TenantProvider, so
+ * every zone starts without tenant branding and twelve fixed it independently.
+ * DMS was the thirteenth: it rendered the estate default — the SEBA mark — on
+ * MK’s own hostname, to MK’s customers. Not a DMS defect; an inherited gap.
+ */
+async function requestHost(): Promise<string | null> {
+  const headerList = await headers();
+  return headerList.get('x-kss-host');
+}
+
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  // Resolved once per request and handed to every branded surface through
+  // context. Components must not re-read TENANTS themselves.
+  const assets = tenantAssets(resolveTenant(await requestHost()));
   return (
     <html className="h-full" suppressHydrationWarning>
       <body
@@ -93,8 +124,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <I18nProvider>
                   <TooltipsProvider>
                     <ModulesProvider>
-                      <AppShell>{children}</AppShell>
-                      <Toaster />
+                      <TenantProvider assets={assets}>
+                        <AppShell>{children}</AppShell>
+                        <Toaster />
+                      </TenantProvider>
                     </ModulesProvider>
                   </TooltipsProvider>
                 </I18nProvider>

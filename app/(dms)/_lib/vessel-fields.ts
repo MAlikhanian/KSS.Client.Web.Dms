@@ -23,39 +23,39 @@ export interface VesselFieldDef {
   /** Non-optional on DmsVessel — see ProjectFieldDef.required. */
   required?: true;
   kind: 'text' | 'number';
-  /** English default; the Persian label is the FRD's own, quoted for reference. */
+  /** English default; the Persian label is the customer's own wording, quoted for reference. */
   label: string;
-  frdLabel: string;
+  specLabel: string;
   group: 'identity' | 'dimensions' | 'capability';
 }
 
 export const VESSEL_FIELDS: readonly VesselFieldDef[] = [
-  { key: 'name', required: true, kind: 'text', label: 'Vessel name', frdLabel: 'نام شناور', group: 'identity' },
-  { key: 'vesselType', kind: 'text', label: 'Vessel type', frdLabel: 'نوع شناور', group: 'identity' },
-  { key: 'manufacturer', kind: 'text', label: 'Manufacturer', frdLabel: 'سازنده', group: 'identity' },
-  { key: 'buildYear', kind: 'number', label: 'Build year', frdLabel: 'سال ساخت', group: 'identity' },
-  { key: 'refitYear', kind: 'number', label: 'Refit year', frdLabel: 'سال بازسازی', group: 'identity' },
-  { key: 'portOfRegistry', kind: 'text', label: 'Port of registry', frdLabel: 'بندر ثبت', group: 'identity' },
-  { key: 'model', kind: 'text', label: 'Model', frdLabel: 'مدل', group: 'identity' },
+  { key: 'name', required: true, kind: 'text', label: 'Vessel name', specLabel: 'نام شناور', group: 'identity' },
+  { key: 'vesselType', kind: 'text', label: 'Vessel type', specLabel: 'نوع شناور', group: 'identity' },
+  { key: 'manufacturer', kind: 'text', label: 'Manufacturer', specLabel: 'سازنده', group: 'identity' },
+  { key: 'buildYear', kind: 'number', label: 'Build year', specLabel: 'سال ساخت', group: 'identity' },
+  { key: 'refitYear', kind: 'number', label: 'Refit year', specLabel: 'سال بازسازی', group: 'identity' },
+  { key: 'portOfRegistry', kind: 'text', label: 'Port of registry', specLabel: 'بندر ثبت', group: 'identity' },
+  { key: 'model', kind: 'text', label: 'Model', specLabel: 'مدل', group: 'identity' },
 
-  { key: 'heightM', kind: 'number', label: 'Height (m)', frdLabel: 'ارتفاع', group: 'dimensions' },
-  { key: 'lengthWithLadderM', kind: 'number', label: 'Length with ladder (m)', frdLabel: 'طول با نردبان', group: 'dimensions' },
-  { key: 'pontoonLengthM', kind: 'number', label: 'Pontoon length (m)', frdLabel: 'طول پانتون', group: 'dimensions' },
-  { key: 'overallLengthM', kind: 'number', label: 'Overall length (m)', frdLabel: 'طول کلی', group: 'dimensions' },
-  { key: 'beamM', kind: 'number', label: 'Beam (m)', frdLabel: 'عرض', group: 'dimensions' },
+  { key: 'heightM', kind: 'number', label: 'Height (m)', specLabel: 'ارتفاع', group: 'dimensions' },
+  { key: 'lengthWithLadderM', kind: 'number', label: 'Length with ladder (m)', specLabel: 'طول با نردبان', group: 'dimensions' },
+  { key: 'pontoonLengthM', kind: 'number', label: 'Pontoon length (m)', specLabel: 'طول پانتون', group: 'dimensions' },
+  { key: 'overallLengthM', kind: 'number', label: 'Overall length (m)', specLabel: 'طول کلی', group: 'dimensions' },
+  { key: 'beamM', kind: 'number', label: 'Beam (m)', specLabel: 'عرض', group: 'dimensions' },
   // The FRD says «بر حسب تن یا کیلوگرم» and does not choose, so the label does
   // not claim a unit the source has not fixed.
-  { key: 'weight', kind: 'number', label: 'Weight', frdLabel: 'وزن', group: 'dimensions' },
-  { key: 'draftM', kind: 'number', label: 'Draft (m)', frdLabel: 'آبخور', group: 'dimensions' },
+  { key: 'weight', kind: 'number', label: 'Weight', specLabel: 'وزن', group: 'dimensions' },
+  { key: 'draftM', kind: 'number', label: 'Draft (m)', specLabel: 'آبخور', group: 'dimensions' },
 
-  { key: 'dredgingDepthM', kind: 'number', label: 'Dredging depth (m)', frdLabel: 'عمق لایروبی', group: 'capability' },
-  { key: 'cutterPowerKw', kind: 'number', label: 'Cutter power (kW)', frdLabel: 'توان کاتر', group: 'capability' },
-  { key: 'actualDailyCapacityM3', kind: 'number', label: 'Actual daily capacity (m³/day)', frdLabel: 'ظرفیت واقعی روزانه', group: 'capability' },
-  { key: 'enginePower', kind: 'number', label: 'Engine power', frdLabel: 'توان موتور', group: 'capability' },
-  { key: 'pumpShaftPower', kind: 'number', label: 'Pump shaft power', frdLabel: 'توان شفت پمپ', group: 'capability' },
-  { key: 'cutterShaftPower', kind: 'number', label: 'Cutter shaft power', frdLabel: 'توان شفت کاتر', group: 'capability' },
+  { key: 'dredgingDepthM', kind: 'number', label: 'Dredging depth (m)', specLabel: 'عمق لایروبی', group: 'capability' },
+  { key: 'cutterPowerKw', kind: 'number', label: 'Cutter power (kW)', specLabel: 'توان کاتر', group: 'capability' },
+  { key: 'actualDailyCapacityM3', kind: 'number', label: 'Actual daily capacity (m³/day)', specLabel: 'ظرفیت واقعی روزانه', group: 'capability' },
+  { key: 'enginePower', kind: 'number', label: 'Engine power', specLabel: 'توان موتور', group: 'capability' },
+  { key: 'pumpShaftPower', kind: 'number', label: 'Pump shaft power', specLabel: 'توان شفت پمپ', group: 'capability' },
+  { key: 'cutterShaftPower', kind: 'number', label: 'Cutter shaft power', specLabel: 'توان شفت کاتر', group: 'capability' },
   // «بر حسب گره یا واحد عملیاتی» — knots or an operational unit, unfixed.
-  { key: 'speed', kind: 'number', label: 'Speed', frdLabel: 'سرعت', group: 'capability' },
+  { key: 'speed', kind: 'number', label: 'Speed', specLabel: 'سرعت', group: 'capability' },
 ] as const;
 
 export const VESSEL_FIELD_GROUPS: ReadonlyArray<{

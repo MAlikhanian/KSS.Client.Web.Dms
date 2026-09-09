@@ -24,7 +24,7 @@ export interface SubprojectFieldDef {
   required?: true;
   kind: 'text' | 'longtext' | 'number' | 'date';
   label: string;
-  frdLabel: string;
+  specLabel: string;
   section: SubprojectSectionId;
 }
 
@@ -53,42 +53,42 @@ export const SUBPROJECT_SECTIONS: ReadonlyArray<{
 
 export const SUBPROJECT_FIELDS: readonly SubprojectFieldDef[] = [
   // ── 1. Identity and scope (8) ──
-  { key: 'title', required: true, kind: 'text', label: 'Subproject title', frdLabel: 'عنوان زیرپروژه', section: 'identity' },
-  { key: 'subprojectNumber', kind: 'text', label: 'Subproject number', frdLabel: 'شماره زیرپروژه', section: 'identity' },
-  { key: 'location', kind: 'text', label: 'Location', frdLabel: 'موقعیت جغرافیایی', section: 'identity' },
-  { key: 'summary', kind: 'longtext', label: 'Summary', frdLabel: 'شرح مختصر زیرپروژه', section: 'identity' },
+  { key: 'title', required: true, kind: 'text', label: 'Subproject title', specLabel: 'عنوان زیرپروژه', section: 'identity' },
+  { key: 'subprojectNumber', kind: 'text', label: 'Subproject number', specLabel: 'شماره زیرپروژه', section: 'identity' },
+  { key: 'location', kind: 'text', label: 'Location', specLabel: 'موقعیت جغرافیایی', section: 'identity' },
+  { key: 'summary', kind: 'longtext', label: 'Summary', specLabel: 'شرح مختصر زیرپروژه', section: 'identity' },
   /**
    * ۲-۲ carries the vessel as free TEXT. This is the THIRD place a vessel
    * appears — ۲-۴ is the authoritative one-to-one and ۲-۷ denormalises it — so
    * these two are recorded because they are in the schema and are never read
    * as the link. getProjectVessel is the link.
    */
-  { key: 'vesselType', kind: 'text', label: 'Vessel type', frdLabel: 'نوع شناور', section: 'identity' },
-  { key: 'vesselNameUsed', kind: 'text', label: 'Vessel used', frdLabel: 'نام شناور مورد استفاده', section: 'identity' },
-  { key: 'initialVolumeM3', kind: 'number', label: 'Initial volume (m³)', frdLabel: 'حجم اولیه', section: 'identity' },
-  { key: 'finalVolumeM3', kind: 'number', label: 'Final volume (m³)', frdLabel: 'حجم نهایی', section: 'identity' },
+  { key: 'vesselType', kind: 'text', label: 'Vessel type', specLabel: 'نوع شناور', section: 'identity' },
+  { key: 'vesselNameUsed', kind: 'text', label: 'Vessel used', specLabel: 'نام شناور مورد استفاده', section: 'identity' },
+  { key: 'initialVolumeM3', kind: 'number', label: 'Initial volume (m³)', specLabel: 'حجم اولیه', section: 'identity' },
+  { key: 'finalVolumeM3', kind: 'number', label: 'Final volume (m³)', specLabel: 'حجم نهایی', section: 'identity' },
 
   // ── 2. Dates, durations and notices (6) ──
-  { key: 'noticeDate', kind: 'date', label: 'Notice date', frdLabel: 'تاریخ ابلاغ', section: 'periods' },
-  { key: 'noticeLetterNumber', kind: 'text', label: 'Notice letter number', frdLabel: 'شماره نامه ابلاغ', section: 'periods' },
+  { key: 'noticeDate', kind: 'date', label: 'Notice date', specLabel: 'تاریخ ابلاغ', section: 'periods' },
+  { key: 'noticeLetterNumber', kind: 'text', label: 'Notice letter number', specLabel: 'شماره نامه ابلاغ', section: 'periods' },
   // «بر حسب روز یا ماه» — the FRD does not choose, so the label does not claim one.
-  { key: 'initialDuration', kind: 'number', label: 'Initial duration', frdLabel: 'مدت اولیه', section: 'periods' },
-  { key: 'startDate', kind: 'date', label: 'Start date', frdLabel: 'تاریخ شروع', section: 'periods' },
-  { key: 'plannedEndDate', kind: 'date', label: 'Planned end date', frdLabel: 'تاریخ اتمام بر اساس مدت اولیه', section: 'periods' },
-  { key: 'deliveryDate', kind: 'date', label: 'Delivery date', frdLabel: 'تاریخ تحویل یا پایان عملیات', section: 'periods' },
+  { key: 'initialDuration', kind: 'number', label: 'Initial duration', specLabel: 'مدت اولیه', section: 'periods' },
+  { key: 'startDate', kind: 'date', label: 'Start date', specLabel: 'تاریخ شروع', section: 'periods' },
+  { key: 'plannedEndDate', kind: 'date', label: 'Planned end date', specLabel: 'تاریخ اتمام بر اساس مدت اولیه', section: 'periods' },
+  { key: 'deliveryDate', kind: 'date', label: 'Delivery date', specLabel: 'تاریخ تحویل یا پایان عملیات', section: 'periods' },
 
   // ── 3. Parties (3) ──
-  { key: 'operatorEntityName', kind: 'text', label: 'Operator', frdLabel: 'بهره‌بردار', section: 'parties' },
-  { key: 'operatorProjectManager', kind: 'text', label: 'Operator project manager', frdLabel: 'مدیر پروژه بهره‌بردار', section: 'parties' },
-  { key: 'siteManager', kind: 'text', label: 'Site manager', frdLabel: 'مدیر کارگاه', section: 'parties' },
+  { key: 'operatorEntityName', kind: 'text', label: 'Operator', specLabel: 'بهره‌بردار', section: 'parties' },
+  { key: 'operatorProjectManager', kind: 'text', label: 'Operator project manager', specLabel: 'مدیر پروژه بهره‌بردار', section: 'parties' },
+  { key: 'siteManager', kind: 'text', label: 'Site manager', specLabel: 'مدیر کارگاه', section: 'parties' },
 
   // ── 4. Maps and attachments (2) ──
-  { key: 'initialMaps', kind: 'longtext', label: 'Initial maps', frdLabel: 'نقشه‌های اولیه', section: 'maps' },
-  { key: 'asBuiltMaps', kind: 'longtext', label: 'As-built maps', frdLabel: 'نقشه‌های چون‌ساخت', section: 'maps' },
+  { key: 'initialMaps', kind: 'longtext', label: 'Initial maps', specLabel: 'نقشه‌های اولیه', section: 'maps' },
+  { key: 'asBuiltMaps', kind: 'longtext', label: 'As-built maps', specLabel: 'نقشه‌های چون‌ساخت', section: 'maps' },
 
   // ── 5. Amounts (4) ──
-  { key: 'initialAmount', kind: 'number', label: 'Initial amount', frdLabel: 'مبلغ اولیه', section: 'amounts' },
-  { key: 'finalAmount', kind: 'number', label: 'Final amount', frdLabel: 'مبلغ نهایی', section: 'amounts' },
-  { key: 'provisionalAdjustmentAmount', kind: 'number', label: 'Provisional adjustment amount', frdLabel: 'مبلغ تعدیل موقت', section: 'amounts' },
-  { key: 'finalAdjustmentAmount', kind: 'number', label: 'Final adjustment amount', frdLabel: 'مبلغ تعدیل نهایی', section: 'amounts' },
+  { key: 'initialAmount', kind: 'number', label: 'Initial amount', specLabel: 'مبلغ اولیه', section: 'amounts' },
+  { key: 'finalAmount', kind: 'number', label: 'Final amount', specLabel: 'مبلغ نهایی', section: 'amounts' },
+  { key: 'provisionalAdjustmentAmount', kind: 'number', label: 'Provisional adjustment amount', specLabel: 'مبلغ تعدیل موقت', section: 'amounts' },
+  { key: 'finalAdjustmentAmount', kind: 'number', label: 'Final adjustment amount', specLabel: 'مبلغ تعدیل نهایی', section: 'amounts' },
 ] as const;
