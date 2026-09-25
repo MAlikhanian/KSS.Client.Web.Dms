@@ -55,6 +55,8 @@ import {
 import { type MenuConfig } from './types';
 import { translateMenuItems } from '@/lib/menu-translation-utils';
 import { DMS_MENU_ENTRIES, DMS_MENU_PARENT_TITLE } from '@/lib/dms/menu';
+import { filterDmsMenuByRole } from '@/lib/dms/menu-filter';
+import { getCurrentRole } from '@/lib/dms/session';
 
 /**
  * ⚠ THIS ARRAY HAS BEEN CUT DOWN FOR DMS, AND WHAT IS MISSING IS MISSING ON
@@ -66,7 +68,7 @@ import { DMS_MENU_ENTRIES, DMS_MENU_PARENT_TITLE } from '@/lib/dms/menu';
  * pointing at another zone's slug, plus template/demo entries belonging to no
  * product, plus any section heading left labelling nothing.
  *
- * Amir asked (msg 204) for his pages under one heading. He was looking at a
+ * The customer asked for his pages under one heading. He was looking at a
  * sidebar carrying twelve other products, because `getTranslatedMenuSidebar`
  * composed the whole estate's menu and appended ours underneath.
  *
@@ -1081,7 +1083,7 @@ export function getTranslatedMenuSidebar(t: (key: string) => string): MenuConfig
   // THAT DOES NOT MAKE THEM SAFE TO CUT, and the condition is unchanged: it
   // narrows who could be harmed to a SuperAdmin, and it still cannot tell us
   // what chrome the Shell renders around this sidebar. The decision remains
-  // Christina's after someone looks at a rendered page.
+  // OPEN, and waits on someone looking at a rendered page.
   //
   // THE CONDITION FOR DECIDING THEM IS ONE LOOK AT A RENDERED PAGE, and nobody
   // has looked yet. Nobody removes them before that. An incomplete-looking list
@@ -1228,7 +1230,7 @@ const buildMenuDms = (
   t: (key: string, opts?: { defaultValue: string }) => string,
 ): MenuConfig => [
   {
-    // Amir, msg 204: the nine entries under one heading. The heading string
+    // A customer requirement: the nine entries under one heading. The heading string
     // is DERIVED from his own bytes with one deliberate character changed —
     // see DMS_MENU_PARENT_TITLE in lib/dms/menu.ts, which carries the raw-file
     // path, its sha256, and why the ZWNJ substitution was made. Do not inline
@@ -1243,12 +1245,21 @@ const buildMenuDms = (
     // a `roles:` tag on ANY future parent would take all nine down with it,
     // not just itself. Executed and confirmed at this depth, not assumed from
     // the top-level result.
-    // NOT translated: it is Amir's own string, already in his language, with
+    // NOT translated: it is the customer's own string, already in his language, with
     // its provenance and sha256 recorded at the constant. Routing it through
     // t() would give it a second home and a way to drift from his bytes.
     title: DMS_MENU_PARENT_TITLE,
     icon: Ship,
-    children: DMS_MENU_ENTRIES.map((entry) => ({
+    // Filtered to the current role. The cookie read happens HERE, in the
+    // caller, so `filterDmsMenuByRole` stays pure and testable without a
+    // browser — the harness exercises the real function, not a stand-in.
+    //
+    // ⛔ THIS IS NOT AN ACCESS CONTROL AND MUST NOT BE MISTAKEN FOR ONE.
+    // The routes are gated in middleware.ts; this only stops the menu
+    // offering a role screens it will be refused. It fails OPEN by design:
+    // no cookie means the whole menu, because an empty sidebar is a worse
+    // failure than an over-full one. Hiding a link is not preventing access.
+    children: filterDmsMenuByRole(DMS_MENU_ENTRIES, getCurrentRole()).map((entry) => ({
       title: t('dms:' + entry.titleKey, { defaultValue: entry.title }),
       path: entry.path,
     })),

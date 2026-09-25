@@ -28,13 +28,27 @@ import {
 } from '@/lib/dms/mock-store';
 import { formatMinutes } from '../_lib/report-status';
 import { useDmsActor } from '../_lib/use-dms-actor';
-import { KpiFigureTile, KpiQuantityTile } from './components';
+import { loadAggregate } from './aggregate';
+import {
+  physicalProgressPercent,
+  stoppageMinutesByParty,
+  timeShareSlices,
+} from './chart-data';
+import {
+  FinancialProgressGap,
+  KpiFigureTile,
+  KpiQuantityTile,
+  PhysicalProgressPanel,
+  StoppageByPartyChart,
+  TimeShareChart,
+} from './components';
+import { SampleDataPageLine } from '../_components/sample-data';
 
 /**
- * The KPI dashboard — §1: «مشاهده داشبورد کلان مدیریتی», کنترل پروژه only.
+ * The KPI dashboard — the specification's roles section: «مشاهده داشبورد کلان مدیریتی», کنترل پروژه only.
  *
  * ─── WHAT IS HERE AND WHAT IS DELIBERATELY NOT ──────────────────────────────
- * §4's four intermediate quantities are fully defined by the document and are
+ * The specification's four intermediate quantities are fully defined by the document and are
  * shown as figures. **All five KPIs now carry values** — three of them closed
  * on 2026-09-08 by the customer's own answer, having previously been rendered
  * as visible gaps. Every one shows the reading it was computed under, because
@@ -44,8 +58,25 @@ import { KpiFigureTile, KpiQuantityTile } from './components';
  * and any KPI whose input or definition is missing still renders as itself
  * rather than as a zero.
  *
- * §5's four charts are NOT here. Nobody asked for them, and two of them depend
- * on the same undefined quantities.
+ * ─── THE SPECIFIED VISUALISATIONS — THREE CHARTS AND ONE NAMED GAP ───────────────────
+ * The customer asked for this screen to become graphical and to be the DMS home
+ * page. Three of the four specified charts render: time share, stoppages by responsible party,
+ * physical progress.
+ *
+ * ⛔ FINANCIAL PROGRESS IS A NAMED GAP, NOT A MISSING CHART. With the fields the
+ * specification defines it is the SAME NUMBER as physical progress —
+ * `computeEarnedValue` derives the unit rate as contract ÷ initial volume, so
+ * the contract cancels out of the ratio. No data can separate them. See the
+ * component's own note; do not "finish" it by drawing a second bar.
+ *
+ * ⛔ AVAILABILITY AND DOWNTIME MUST NEVER SHARE ONE FIGURE. They use different
+ * denominators — 1440 against the sum of times logged — so they do not
+ * complement to 100. The time-share chart is safe because its parts genuinely
+ * sum to one whole; that is a property of THAT chart, not a licence for others.
+ *
+ * The four ambiguous KPIs are still excluded: the customer has not resolved what
+ * they mean, and a confident chart would assert an interpretation he has not
+ * given.
  *
  * ─── APPROVED-ONLY ──────────────────────────────────────────────────────────
  * The engine takes `ApprovedDailyReport[]`, which only `listApprovedReports`
@@ -65,6 +96,30 @@ export function DashboardContent() {
     retry: false,
   });
 
+  /**
+   * The all-projects default. A SEPARATE query, not an inversion of the three
+   * below — see the note on `enabled` there.
+   */
+  const aggregateQuery = useQuery({
+    queryKey: ['dms', 'aggregate'],
+    queryFn: loadAggregate,
+    enabled: ready && !projectId,
+    retry: false,
+  });
+
+  /**
+   * ⛔ `enabled: !!projectId` IS NOT AN OPTIMISATION — IT PREVENTS A THROW.
+   *
+   * All three readers call `requireProject(projectId)`, and `''` matches no
+   * project, so an empty id raises `NotFound 404 "Project '' was not found."`
+   * — verified against the store, not inferred. Removing the gate to "just
+   * load everything by default" therefore puts THREE error panels on the first
+   * screen anyone opens, and they render as the product being broken rather
+   * than as a state we chose.
+   *
+   * The empty-project case is served by `aggregateQuery` above, gated on the
+   * complement, so exactly one of the two sets is ever live.
+   */
   const [approvedQuery, cyclesQuery, stoppagesQuery] = useQueries({
     queries: [
       {
@@ -128,6 +183,13 @@ export function DashboardContent() {
 
   const project = projectsQuery.data?.find((p) => p.id === projectId);
 
+  // Shaped once for the specified stoppage chart: bars and the unattributed total
+  // come from ONE call, so they cannot disagree about the same rows.
+  const partyStoppages = stoppageMinutesByParty({
+    reports: approvedQuery.data ?? [],
+    stoppages: stoppagesQuery.data ?? [],
+  });
+
   const kpis =
     loaded && project
       ? computeKpis({
@@ -140,6 +202,7 @@ export function DashboardContent() {
 
   return (
     <div className="space-y-5 lg:space-y-7.5">
+      <SampleDataPageLine />
       <Toolbar>
         <ToolbarHeading>
           <ToolbarTitle>
@@ -186,12 +249,93 @@ export function DashboardContent() {
         </Card>
       </div>
 
-      {!projectId && (
+      {/* ─── DEFAULT STATE: every project, aggregated ─────────────────────── */}
+      {!projectId && aggregateQuery.isLoading && (
         <Card>
           <CardContent className="py-8 text-sm text-muted-foreground">
-            {t('noProjectBody', {
-              defaultValue: 'Choose a project above to see its days.',
-            })}
+            {t('loading', { defaultValue: 'Loading…' })}
+          </CardContent>
+        </Card>
+      )}
+
+      {!projectId && !!aggregateQuery.error && (
+        <div className="[&_div.rounded-xl.bg-card.bg-card]:border-red-500! dark:[&_div.rounded-xl.bg-card.bg-card]:border-red-500!">
+          <Card>
+            <CardContent className="py-8 space-y-3">
+              <h2 className="font-semibold">
+                {t('aggregateFailedTitle', {
+                  defaultValue: 'The overview could not be loaded',
+                })}
+              </h2>
+              <Button variant="outline" onClick={() => void aggregateQuery.refetch()}>
+                {t('retry', { defaultValue: 'Try again' })}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {!projectId && aggregateQuery.isSuccess && (
+        <Card>
+          <CardContent className="py-4 space-y-3">
+            <h2 className="font-medium">
+              {t('allProjectsTitle', { defaultValue: 'All projects' })}
+            </h2>
+
+            {/*
+              ⛔ THE PARTIAL STATE. A total that silently omits a project it
+              could not read is a total that excludes without saying so — and on
+              an aggregate nobody can see which projects are in it. So the
+              disclosure is rendered from the SAME object the figures come from,
+              never from a separate count, and it NAMES what was left out.
+
+              ⚠ The two empty-looking cases are not symmetric: a project that
+              read successfully and returned nothing is a real zero and is IN
+              the denominator; a project that could not be READ is an absence
+              and is OUT. Including the second at full volume would assert it
+              did no work, which we do not know.
+            */}
+            {aggregateQuery.data.excluded.length > 0 && (
+              <p className="text-xs text-amber-600 dark:text-amber-500">
+                {t('aggregatePartial', {
+                  defaultValue: 'Aggregated from {{included}} of {{total}} projects.',
+                  included: aggregateQuery.data.included.length,
+                  total:
+                    aggregateQuery.data.included.length +
+                    aggregateQuery.data.excluded.length,
+                })}{' '}
+                {aggregateQuery.data.excluded
+                  .map((e) => `${e.project.projectCode} (${e.code})`)
+                  .join('، ')}
+              </p>
+            )}
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              <KpiQuantityTile
+                label={t('projectsIncluded', { defaultValue: 'Projects included' })}
+                value={String(aggregateQuery.data.included.length)}
+              />
+              <KpiQuantityTile
+                label={t('approvedReports', { defaultValue: 'Approved reports' })}
+                value={String(aggregateQuery.data.reports.length)}
+              />
+              <KpiQuantityTile
+                label={t('dredgedVolume', { defaultValue: 'Dredged volume' })}
+                value={String(
+                  aggregateQuery.data.cycles.reduce(
+                    (sum, c) => sum + (c.dredgedVolumeM3 ?? 0),
+                    0,
+                  ),
+                )}
+                unit="m³"
+              />
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              {t('selectProjectHint', {
+                defaultValue: 'Choose a project above to see its own figures.',
+              })}
+            </p>
           </CardContent>
         </Card>
       )}
@@ -259,7 +403,98 @@ export function DashboardContent() {
 
       {kpis && kpis.totals.reportCount > 0 && (
         <>
-          {/* §4's defined quantities. */}
+          {/*
+            ─── THE SPECIFIED VISUALISATIONS ────────────────────────────────────────
+            Every input comes from `kpis.totals`, which `computeIntermediateTotals`
+            derives from the BRANDED approved reports and narrows the cycles and
+            stoppages against itself. Nothing here re-filters — a second copy of
+            the approved-only rule would be a convention sitting beside a control,
+            and the copy is the half that rots.
+          */}
+          {/*
+            Computed ONCE. Two call sites for the same shaping is two things to
+            keep in step, and the one that gets edited is never both.
+          */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <TimeShareChart
+              title={t('chartTimeShare', { defaultValue: 'Time share' })}
+              slices={timeShareSlices(kpis.totals)}
+              emptyText={t('chartNoTime', { defaultValue: 'No time recorded yet.' })}
+              labelFor={(key) =>
+                ({
+                  Dredging: t('phaseDredging', { defaultValue: 'Dredging' }),
+                  Transport: t('phaseTransport', { defaultValue: 'Transport' }),
+                  Discharge: t('phaseDischarge', { defaultValue: 'Discharge' }),
+                  Return: t('phaseReturn', { defaultValue: 'Return' }),
+                  // ⛔ `chart*`, NOT `phase*`. The four phase keys are shared
+                  // cycle vocabulary — they render in the cycle FORM and the
+                  // cycle TABLE as well as here — and `TimeShareSlice.key` is
+                  // typed `CyclePhase | 'Stoppage'`, so stoppage is explicitly
+                  // NOT a phase. This label is chart-only and belongs in the
+                  // namespace this file already uses for chart-only strings.
+                  Stoppage: t('chartTimeShareStoppage', { defaultValue: 'Stoppages' }),
+                })[key] ?? key
+              }
+            />
+
+            <StoppageByPartyChart
+              title={t('chartStoppageParty', {
+                defaultValue: 'Stoppages by responsible party',
+              })}
+              bars={partyStoppages.bars}
+              emptyText={t('chartNoStoppages', {
+                defaultValue: 'No stoppages recorded yet.',
+              })}
+              unattributedNote={
+                partyStoppages.unattributedMinutes > 0
+                  ? t('chartUnattributed', {
+                      defaultValue:
+                        'Some stoppages have no responsible party recorded and are not in any bar.',
+                    })
+                  : null
+              }
+              labelFor={(party) =>
+                ({
+                  Master: t('partyMaster', { defaultValue: 'Master' }),
+                  Client: t('partyClient', { defaultValue: 'Client' }),
+                  Dredge: t('partyDredge', { defaultValue: 'Dredge' }),
+                  Survey: t('partySurvey', { defaultValue: 'Survey' }),
+                  // His document supplies BOTH languages for this enum — 'CE' / «ناظر».
+                  // The fallback matches his English, not a friendlier expansion.
+                  CE: t('partyCe', { defaultValue: 'CE' }),
+                })[party] ?? party
+              }
+            />
+
+            <PhysicalProgressPanel
+              title={t('chartPhysicalProgress', {
+                defaultValue: 'Physical progress',
+              })}
+              percent={physicalProgressPercent(
+                kpis.totals.dredgedVolumeM3,
+                project?.initialDredgingVolumeM3,
+              )}
+              caption={t('chartPhysicalCaption', {
+                defaultValue: 'Dredged volume against the contracted volume.',
+              })}
+              noDenominatorText={t('chartNoInitialVolume', {
+                defaultValue:
+                  'This project has no recorded initial dredging volume, so progress cannot be shown.',
+              })}
+            />
+
+            <FinancialProgressGap
+              title={t('chartFinancialProgress', {
+                defaultValue: 'Financial progress',
+              })}
+              body={t('chartFinancialGap', {
+                defaultValue:
+                  'Financial progress needs a separately recorded work-done amount. The system does not hold one, so this figure would repeat physical progress rather than tell a second story.',
+              })}
+            />
+          </div>
+
+          {/* The specification's defined quantities. */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             <KpiQuantityTile
               label={t('approvedReports', {
@@ -320,11 +555,11 @@ export function DashboardContent() {
           </div>
 
           {/*
-            CLOSED 2026-09-08 by Amir's own answer. These were gap tiles; they
+            CLOSED 2026-09-08 by the customer's own answer. These were gap tiles; they
             are values now, rendered through KpiFigureTile like the others so the
             union is narrowed in one place. Each carries its basis, because the
             customer settled the DENOMINATOR and not the numerator, and because
-            the per-category split is our reading of §4 rather than his words.
+            the per-category split is our reading of the specification rather than his words.
           */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <KpiFigureTile
@@ -348,7 +583,7 @@ export function DashboardContent() {
           </div>
 
           {/*
-            Earned value — Amir's answer 3, the part Amanda ruled IN scope.
+            Earned value — from the customer's answers, the part ruled IN scope.
             Recording client payments and the reconciliation report are OUT and
             nothing here reaches toward them: they are persisted financial
             records and DMS has no persistence layer, so a screen that appeared
@@ -394,7 +629,7 @@ export function DashboardContent() {
                     <p className="text-sm text-muted-foreground">
                       {t('unclassifiedNote', {
                         defaultValue:
-                          'Stoppage time in a category outside the three the FRD lists',
+                          'Stoppage time in a category outside the three defined categories',
                       })}
                       : {formatMinutes(kpis.totals.unclassifiedStoppageMinutes)}
                     </p>
@@ -404,10 +639,10 @@ export function DashboardContent() {
                       {/*
                        * ⚠ DMS-PROVISIONAL-TERM — «مرحله» (cycle phase)
                        *
-                       * Our coinage. Amir has not confirmed it: it was chosen because a search
-                       * of his FRD returned nothing for the concept, not because he named it.
-                       * Caroline will put it to him alongside the working screen, as an
-                       * invitation to correct rather than a question to answer.
+                       * Our coinage. The customer has not confirmed it: it was chosen because a
+                       * search of the specification returned nothing for the concept, not because
+                       * the customer named it. It is to be offered to the customer alongside the
+                       * working screen, as an invitation to correct rather than a question to answer.
                        *
                        * ⛔ IF HE CORRECTS IT, THIS IS A GREP AND NOT AN AUDIT:
                        *     grep -r "DMS-PROVISIONAL-TERM" "app/(dms)"
@@ -425,10 +660,10 @@ export function DashboardContent() {
                       {/*
                        * ⚠ DMS-PROVISIONAL-TERM — «رفت‌وبرگشت» (round trip)
                        *
-                       * Our coinage. Amir has not confirmed it: it was chosen because a search
-                       * of his FRD returned nothing for the concept, not because he named it.
-                       * Caroline will put it to him alongside the working screen, as an
-                       * invitation to correct rather than a question to answer.
+                       * Our coinage. The customer has not confirmed it: it was chosen because a
+                       * search of the specification returned nothing for the concept, not because
+                       * the customer named it. It is to be offered to the customer alongside the
+                       * working screen, as an invitation to correct rather than a question to answer.
                        *
                        * ⛔ IF HE CORRECTS IT, THIS IS A GREP AND NOT AN AUDIT:
                        *     grep -r "DMS-PROVISIONAL-TERM" "app/(dms)"
