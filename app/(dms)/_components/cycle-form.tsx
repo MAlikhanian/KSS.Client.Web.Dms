@@ -9,6 +9,7 @@ import { minutesBetween } from '@/lib/dms/kpi';
 import type { DmsCycle } from '@/lib/dms/types';
 import { parseOptionalNumber, toEnglishDigits } from '../_lib/digits';
 import { formatMinutes } from '../_lib/report-status';
+import { SampleDataPageLine } from './sample-data';
 
 export type CycleDraft = Omit<DmsCycle, 'id' | 'reportId' | 'cycleNumber'>;
 
@@ -101,6 +102,7 @@ export function CycleForm({
 
   return (
     <div className="rounded-lg border border-border p-4 space-y-4">
+      <SampleDataPageLine />
       <div className="space-y-1.5 max-w-xs">
         <label className="text-sm font-medium block" htmlFor="cyc-date">
           {t('cycleDate', { defaultValue: 'Date' })}{' '}

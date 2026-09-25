@@ -27,6 +27,7 @@ import type {
   ReportStatus,
 } from '@/lib/dms/types';
 import { StoppageForm, type StoppageDraft } from './stoppage-form';
+import { SampleDataPageLine, SampleDataTable } from './sample-data';
 
 /**
  * Section 3 — stoppages. Amber.
@@ -115,6 +116,7 @@ export function StoppagesSection({
 
   return (
     <Card>
+      <SampleDataPageLine />
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <span className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center text-white text-sm font-bold">
@@ -217,7 +219,8 @@ export function StoppagesSection({
 
         {!isLoading && !error && stoppages.length > 0 && (
           <div className="overflow-x-auto">
-            <Table>
+            <SampleDataTable>
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>{t('stoppageCode', { defaultValue: 'Code' })}</TableHead>
@@ -283,7 +286,8 @@ export function StoppagesSection({
                   );
                 })}
               </TableBody>
-            </Table>
+              </Table>
+            </SampleDataTable>
           </div>
         )}
       </CardContent>

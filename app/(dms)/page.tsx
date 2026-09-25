@@ -34,17 +34,17 @@ const ROLE_LABEL: Record<DmsRole, { key: string; fallback: string; blurb: string
   ProjectControl: {
     key: 'roleProjectControl',
     fallback: 'Project Control',
-    blurb: 'Head office. Defines projects, vessels and personnel; sees the dashboard.',
+    blurb: 'دفتر مرکزی؛ پروژه‌ها، شناورها و پرسنل را تعریف می‌کند و داشبورد را می‌بیند.',
   },
   Operator: {
     key: 'roleOperator',
     fallback: 'Operator',
-    blurb: 'On the vessel. Enters the daily report, and may edit it until submission.',
+    blurb: 'روی شناور؛ گزارش روزانه را ثبت می‌کند و تا زمان ارسال می‌تواند آن را ویرایش کند.',
   },
   VesselSupervisor: {
     key: 'roleVesselSupervisor',
     fallback: 'Vessel Supervisor',
-    blurb: 'Reviews a submitted day: approves it, or rejects it with a reason.',
+    blurb: 'گزارش ارسال‌شده را بررسی می‌کند: آن را تأیید یا با ذکر دلیل رد می‌کند.',
   },
 };
 

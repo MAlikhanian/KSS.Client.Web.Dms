@@ -94,6 +94,8 @@ const KEY_SHIFTS = 'dms:shifts';
 const KEY_REPORTS = 'dms:daily-reports';
 const KEY_CYCLES = 'dms:cycles';
 const KEY_STOPPAGES = 'dms:stoppages';
+/** What the one-time §5 dashboard backfill did — see backfillDashboardSeed. */
+const KEY_BACKFILL_DASHBOARD = 'dms:backfill:dashboard-v1';
 const KEY_STOPPAGE_TYPES = 'dms:stoppage-types';
 
 /**
@@ -211,7 +213,14 @@ const SEED_PROJECTS: DmsProject[] = [
     contractNumber: '1401/114',
     contractSubject: 'لایروبی حوضچه بندر امام',
     executionArea: 'بندر امام خمینی',
-    initialDredgingVolumeM3: 250000,
+    initialDredgingVolumeM3: 7040,
+    // ILLUSTRATIVE — not a customer figure. A flat 850,000 per m³ so the
+    // derived unit rate is checkable by eye on the earned-value tile.
+    // ⛔ FLAT ON PURPOSE — no per-project factor. kpi.ts DERIVES the rate as
+    // contract ÷ initial volume, so the contract cancels out of any progress
+    // ratio: a factor would change nothing and would only break the property
+    // that the rate reads as exactly 850,000 everywhere.
+    initialContractAmount: 5984000000,
   },
   {
     /** The legitimately-empty collection: a real project with no reports yet. */
@@ -220,20 +229,56 @@ const SEED_PROJECTS: DmsProject[] = [
     contractNumber: '1401/115',
     contractSubject: 'لایروبی کانال دسترسی',
     executionArea: 'کانال دسترسی',
-    initialDredgingVolumeM3: 90000,
+    initialDredgingVolumeM3: 2600,
+    // ILLUSTRATIVE — not a customer figure. A flat 850,000 per m³ so the
+    // derived unit rate is checkable by eye on the earned-value tile.
+    // ⛔ FLAT ON PURPOSE — no per-project factor. kpi.ts DERIVES the rate as
+    // contract ÷ initial volume, so the contract cancels out of any progress
+    // ratio: a factor would change nothing and would only break the property
+    // that the rate reads as exactly 850,000 everywhere.
+    initialContractAmount: 2210000000,
   },
   {
     /**
      * The seeded failure path. Deterministic, not random, and confined to this
      * one record: reads scoped to it reject Unavailable so the error state of
      * every list and of the dashboard exists from day one.
+     *
+     * ⛔ THIS PROJECT MUST KEEP FAILING, AND FOR A SECOND REASON IT WAS NOT
+     * BUILT FOR. The dashboard's aggregate discloses "aggregated from N of M
+     * projects", and the assertion that the disclosed N equals the number of
+     * projects actually in the denominator is ONLY CAPABLE OF FAILING BECAUSE
+     * THIS RECORD EXISTS. With every project readable it passes vacuously,
+     * forever, on any implementation.
+     *
+     * It reads as test scaffolding — it is literally a project that throws — so
+     * the obvious tidy-up is to delete it. Deleting it breaks no test. It
+     * silently converts a live control into one that cannot fail.
+     *
+     * ⚠ Its volume deliberately enters NO calculation: a project we could not
+     * READ is not a project that did no work, so it is excluded from the
+     * aggregate rather than counted as a zero. `dms-prj-empty` read
+     * successfully and returned nothing — that IS a zero, and it stays in.
+     * The two are not symmetric and must not be unified.
      */
     id: 'dms-prj-fault',
     projectCode: 'PRJ-1401-C',
     contractNumber: '1401/116',
-    contractSubject: 'پروژه آزمون خطا (داده در دسترس نیست)',
-    executionArea: '—',
-    initialDredgingVolumeM3: 120000,
+    // ⚠ AN ORDINARY-LOOKING PROJECT, DELIBERATELY. The label is customer-
+    // visible — the aggregate's disclosure NAMES the projects it could not
+    // read — so a subject saying "error test" would appear on the landing
+    // screen as the explanation for an incomplete number. The FAILURE is the
+    // fixture's value; the LABEL must not advertise it.
+    contractSubject: 'لایروبی حوضچه چرخش شناورها',
+    executionArea: 'بندر شهید رجایی',
+    initialDredgingVolumeM3: 2100,
+    // ILLUSTRATIVE — not a customer figure. A flat 850,000 per m³ so the
+    // derived unit rate is checkable by eye on the earned-value tile.
+    // ⛔ FLAT ON PURPOSE — no per-project factor. kpi.ts DERIVES the rate as
+    // contract ÷ initial volume, so the contract cancels out of any progress
+    // ratio: a factor would change nothing and would only break the property
+    // that the rate reads as exactly 850,000 everywhere.
+    initialContractAmount: 1785000000,
     simulateUnavailable: true,
   },
 ];
@@ -490,6 +535,51 @@ const SEED_STOPPAGES: DmsStoppage[] = [
     isPlanned: false,
     responsibleParty: 'Client',
   },
+  // ── ILLUSTRATIVE — the three responsible parties the seed did not cover ──
+  //
+  // Master, Survey and CE existed as type values with no rows, so «نمودار
+  // ستونی تحلیل توقفات» could only ever draw two of its five categories.
+  // These are OUR rows, not the customer's data. Times are chosen not to
+  // overlap the stoppages already on these reports.
+  {
+    id: 'dms-stp-4',
+    reportId: 'dms-rep-1',
+    stoppageDate: '2026-09-01',
+    stoppageCode: 'CREW-BRIEF',
+    category: 'Operational',
+    notes: 'توقف عملیات تا تعیین تکلیف فرمانده',
+    startTime: '15:45',
+    endTime: '16:30',
+    durationHours: 0.75,
+    isPlanned: false,
+    responsibleParty: 'Master',
+  },
+  {
+    id: 'dms-stp-5',
+    reportId: 'dms-rep-2',
+    stoppageDate: '2026-09-02',
+    stoppageCode: 'SURVEY-WAIT',
+    category: 'Operational',
+    notes: 'انتظار برای نقشه‌برداری مقطع',
+    startTime: '09:20',
+    endTime: '10:05',
+    durationHours: 0.75,
+    isPlanned: false,
+    responsibleParty: 'Survey',
+  },
+  {
+    id: 'dms-stp-6',
+    reportId: 'dms-rep-2',
+    stoppageDate: '2026-09-02',
+    stoppageCode: 'CE-HOLD',
+    category: 'Operational',
+    notes: 'توقف به دستور ناظر تا بازبینی عمق',
+    startTime: '14:30',
+    endTime: '15:00',
+    durationHours: 0.5,
+    isPlanned: false,
+    responsibleParty: 'CE',
+  },
 ];
 
 // ─── Seeding ────────────────────────────────────────────────────────────────
@@ -617,9 +707,106 @@ function migrateLegacySeedVersion(): void {
   window.localStorage.removeItem(LEGACY_SEED_VERSION_KEY);
 }
 
+/**
+ * Additive backfill for stores seeded BEFORE the §5 dashboard data landed.
+ *
+ * Two collections gained rows and a field on 2026-09-09 — three stoppages
+ * covering the responsible parties that had none, and a contract amount per
+ * project. `seedIfNeverSeeded` keys on a MARKER, not on the rows, so every
+ * browser that had already opened DMS would keep the old data forever and the
+ * dashboard would render two bars of five and an empty financial panel.
+ *
+ * ⛔ NEVER OVERWRITES A PRESENT VALUE. Stoppages are INSERT-IF-ABSENT by id;
+ * the contract amount is SET-IF-MISSING by field. A project where somebody
+ * typed an amount keeps theirs. That is the property re-markering the
+ * collections would have destroyed, which is why this exists instead.
+ *
+ * ⛔ THE MARKER CHECK IS A CONTROL, NOT AN ORDERING RULE. On a store with no
+ * marker the seed itself delivers everything, and inserting first would put
+ * rows into a collection that is about to be seeded — duplicates, or a
+ * half-state. This reads the marker ITSELF rather than relying on being called
+ * in the right place: an ordering dependency is invisible in a diff and breaks
+ * with no symptom, so the failure mode is made unreachable rather than avoided.
+ *
+ * It also RECORDS what it did, under `${KEY_BACKFILL_DASHBOARD}`, so a store
+ * where it skipped is a named case rather than a silent no-op — a migration
+ * that does nothing and says nothing cannot be told from one that never ran.
+ *
+ * ─── WHEN TO DELETE THIS ────────────────────────────────────────────────
+ * ONE-TIME, NOT A PERMANENT FEATURE. It exists only for stores seeded before
+ * 2026-09-09. DELETE IT — with BACKFILL_STOPPAGES, BACKFILL_CONTRACT_AMOUNTS
+ * and KEY_BACKFILL_DASHBOARD — once no store in use predates that date.
+ * ⚠ "No store in use" is PER ORIGIN: localhost:3170 and /dms under the Shell
+ * are independent, so a tester who has used both has two stores and satisfies
+ * the condition twice. Without this note a later reader cannot tell whether
+ * the branch is live or a fossil, and leaves it forever.
+ */
+const BACKFILL_STOPPAGES: readonly string[] = ['dms-stp-4', 'dms-stp-5', 'dms-stp-6'];
+
+const BACKFILL_CONTRACT_AMOUNTS: Readonly<Record<string, number>> = {
+  'dms-prj-1': 5_984_000_000,
+  'dms-prj-empty': 2_210_000_000,
+  'dms-prj-fault': 1_785_000_000,
+};
+
+function backfillDashboardSeed(): void {
+  // ⛔ EACH HALF IS GUARDED BY ITS OWN COLLECTION'S MARKER.
+  //
+  // Markers are PER COLLECTION, so one marker cannot decide for two. A single
+  // `stoppages` guard covering both would, on a store holding the `projects`
+  // marker but not the `stoppages` one, return early and never backfill the
+  // contract amounts — while `seedIfNeverSeeded('projects')` also skips,
+  // because that marker IS present. The amounts would never arrive, the
+  // financial panel would stay empty, and the record would say "unseeded
+  // store", which is false for projects. The one piece of observability we
+  // have would name the wrong reason.
+  //
+  // That state is reachable because ensureSeed's collection list has grown
+  // over time: any store seeded before `stoppages` joined it holds some
+  // markers and not others. We cannot prove such a store exists — we can only
+  // prove we cannot rule it out, which is the same argument that justifies
+  // this backfill at all.
+  const record: Record<string, number | string> = {};
+
+  // ── stoppages ──
+  if (window.localStorage.getItem(seedMarkerKey('stoppages')) === null) {
+    // Never seeded: the seed itself is about to deliver these rows, and
+    // inserting first would put them into a collection about to be written.
+    record.stoppages = 'unseeded store';
+  } else {
+    const stoppages = read<DmsStoppage[]>(KEY_STOPPAGES, []);
+    const have = new Set(stoppages.map((row) => row.id));
+    const missing = SEED_STOPPAGES.filter(
+      (row) => BACKFILL_STOPPAGES.includes(row.id) && !have.has(row.id),
+    );
+    if (missing.length > 0) write(KEY_STOPPAGES, [...stoppages, ...missing]);
+    record.stoppages = missing.length;
+  }
+
+  // ── projects ──
+  if (window.localStorage.getItem(seedMarkerKey('projects')) === null) {
+    record.projects = 'unseeded store';
+  } else {
+    const projects = read<DmsProject[]>(KEY_PROJECTS, []);
+    let filled = 0;
+    const next = projects.map((project) => {
+      const amount = BACKFILL_CONTRACT_AMOUNTS[project.id];
+      // SET-IF-MISSING. `undefined` only — a typed 0 is a real value and stays.
+      if (amount === undefined || project.initialContractAmount !== undefined) return project;
+      filled += 1;
+      return { ...project, initialContractAmount: amount };
+    });
+    if (filled > 0) write(KEY_PROJECTS, next);
+    record.projects = filled;
+  }
+
+  write(KEY_BACKFILL_DASHBOARD, record);
+}
+
 function ensureSeed(): void {
   if (seedCheckedThisLoad) return;
   migrateLegacySeedVersion();
+  backfillDashboardSeed();
   seedIfNeverSeeded('vessels', KEY_VESSELS, SEED_VESSELS);
   seedIfNeverSeeded('projects', KEY_PROJECTS, SEED_PROJECTS);
   seedIfNeverSeeded('vessel-assignments', KEY_VESSEL_ASSIGNMENTS, SEED_VESSEL_ASSIGNMENTS);
@@ -691,7 +878,7 @@ function requireAssignment(projectId: string): DmsVesselAssignment {
   }
   if (rows.length > 1) {
     throw conflict(
-      `Project '${projectId}' has ${rows.length} vessel assignment rows; FRD ۲-۴ makes project_id UNIQUE, so exactly one is permitted.`,
+      `Project '${projectId}' has ${rows.length} vessel assignment rows; a project may hold only one vessel assignment.`,
     );
   }
   return rows[0];
@@ -1045,7 +1232,7 @@ export async function assignVesselToProject(args: {
     const all = read<DmsVesselAssignment[]>(KEY_VESSEL_ASSIGNMENTS, []);
     if (all.some((a) => a.projectId === args.projectId)) {
       throw conflict(
-        `Project '${args.projectId}' already has a vessel assignment. FRD ۲-۴ makes project_id UNIQUE — correct the existing row rather than adding one.`,
+        `Project '${args.projectId}' already has a vessel assignment. A project may hold only one vessel assignment — correct the existing row rather than adding one.`,
       );
     }
 
@@ -1353,7 +1540,7 @@ export async function createPersonnel(args: {
     }
     const fullName = args.fullName.trim();
     if (fullName === '') {
-      throw validation('A person must have a name; ۲-۵ «نام پرسنل» is not optional.');
+      throw validation('A person must have a name; «نام پرسنل» is not optional.');
     }
 
     const created: DmsPersonnel = { id: uuid(), fullName };
@@ -1383,7 +1570,7 @@ export async function updatePersonnel(args: {
     }
     const fullName = (args.patch.fullName ?? existing.fullName).trim();
     if (fullName === '') {
-      throw validation('A person must have a name; ۲-۵ «نام پرسنل» is not optional.');
+      throw validation('A person must have a name; «نام پرسنل» is not optional.');
     }
 
     const next: DmsPersonnel = { ...existing, fullName };
@@ -1587,7 +1774,7 @@ function assertAssignmentWindow(args: {
   );
   if (clash) {
     throw conflict(
-      `This person is already assigned to project '${clash.projectId}' from ${clash.startDate} to ${clash.endDate ?? 'open'}, which overlaps ${args.startDate} to ${args.endDate ?? 'open'}. Amir msg 194: an employee may hold only one project assignment at a time. End the existing assignment BEFORE the new one starts — the end date counts as a day on the project, so to start on ${args.startDate} the previous assignment must end on or before the day before.`,
+      `This person is already assigned to project '${clash.projectId}' from ${clash.startDate} to ${clash.endDate ?? 'open'}, which overlaps ${args.startDate} to ${args.endDate ?? 'open'}. An employee may hold only one project assignment at a time. End the existing assignment first — the end date counts as a day on the project, so to start on ${args.startDate} the previous assignment must end on or before the day before.`,
     );
   }
 }

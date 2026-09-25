@@ -24,6 +24,7 @@ import { createCycle, deleteCycle, updateCycle } from '@/lib/dms/mock-store';
 import type { DmsActor, DmsCycle, ReportStatus } from '@/lib/dms/types';
 import { CycleForm, type CycleDraft } from './cycle-form';
 import { formatMinutes } from '../_lib/report-status';
+import { SampleDataPageLine, SampleDataTable } from './sample-data';
 
 /**
  * Section 2 — cycles. Sky.
@@ -106,6 +107,7 @@ export function CyclesSection({
 
   return (
     <Card>
+      <SampleDataPageLine />
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <span className="w-8 h-8 bg-sky-500 rounded-lg flex items-center justify-center text-white text-sm font-bold">
@@ -204,7 +206,8 @@ export function CyclesSection({
 
         {!isLoading && !error && cycles.length > 0 && (
           <div className="overflow-x-auto">
-            <Table>
+            <SampleDataTable>
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>#</TableHead>
@@ -257,7 +260,8 @@ export function CyclesSection({
                   </TableRow>
                 ))}
               </TableBody>
-            </Table>
+              </Table>
+            </SampleDataTable>
           </div>
         )}
       </CardContent>

@@ -31,6 +31,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
 import { listProjects, listSubprojects } from '@/lib/dms/mock-store';
 import { useDmsActor } from '../../_lib/use-dms-actor';
+import { SampleDataPageLine, SampleDataTable } from '../../_components/sample-data';
 
 /**
  * Subprojects list — ۲-۲ جدول زیرپروژه‌ها.
@@ -93,6 +94,7 @@ export function SubprojectsContent() {
 
   return (
     <div className="space-y-5 lg:space-y-7.5">
+      <SampleDataPageLine />
       <Toolbar>
         <ToolbarHeading>
           <ToolbarTitle>
@@ -202,7 +204,8 @@ export function SubprojectsContent() {
               subprojectsQuery.isSuccess &&
               subprojectsQuery.data.length > 0 && (
                 <div className="overflow-x-auto">
-                  <Table>
+                  <SampleDataTable>
+                    <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>
@@ -239,7 +242,8 @@ export function SubprojectsContent() {
                         </TableRow>
                       ))}
                     </TableBody>
-                  </Table>
+                    </Table>
+                  </SampleDataTable>
                 </div>
               )}
           </CardContent>

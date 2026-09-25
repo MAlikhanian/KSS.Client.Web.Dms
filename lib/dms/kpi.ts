@@ -552,7 +552,7 @@ export function computeKpis(input: {
             value: totals.roundTripMinutes / totals.cycleCount,
             unit: 'minutes',
             basis:
-              'The full round trip — from the start of dredging until the vessel is back at the dredging site — ÷ number of cycles. Includes the idle time between phases.',
+              'میانگین بازهٔ زمانی از شروع هر چرخه تا بازگشت شناور به محل لایروبی، برای چرخه‌های تکمیل‌شده.',
           }
         : {
             kind: 'not-applicable',
@@ -571,7 +571,7 @@ export function computeKpis(input: {
             value: totals.dredgedVolumeM3 / totals.reportCount,
             unit: 'm³ per report',
             basis:
-              'Total dredged volume ÷ number of approved daily reports.',
+              'مجموع حجم لایروبی ثبت‌شده در گزارش‌های روزانه، تقسیم بر تعداد گزارش‌های روزانه.',
           }
         : {
             kind: 'not-applicable',
@@ -643,7 +643,7 @@ export function computeKpis(input: {
       dayMinutes,
       {
         basis:
-          'Stoppage minutes in the Operational CATEGORY ÷ 1440 minutes per approved report (one 24-hour day each). Category-based, like technical downtime — see that tile for why these do not sum to total downtime.',
+          'Stoppage minutes in the Operational category ÷ 1440 minutes per approved report (one 24-hour day each). Category-based, like technical downtime — see that tile for why these do not sum to total downtime.',
       },
     ),
 
@@ -714,7 +714,7 @@ function computeEarnedValue(
     return {
       kind: 'not-applicable',
       reason:
-        'This project has no initial contract amount recorded, so there is no unit rate to apply. Add it on the project’s contract detail.',
+        'این پروژه مبلغ اولیه قرارداد ثبت‌شده ندارد؛ بنابراین نرخ واحد قابل‌محاسبه نیست. این مقدار از بخش «پروژه‌ها» قابل تکمیل است.',
     };
   }
   if (project.initialDredgingVolumeM3 <= 0) {

@@ -24,6 +24,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
 import { listVessels } from '@/lib/dms/mock-store';
 import { useDmsActor } from '../../_lib/use-dms-actor';
+import { SampleDataPageLine, SampleDataTable } from '../../_components/sample-data';
 
 /**
  * Vessels list — ۲-۳ جدول مشخصات فنی شناورها.
@@ -82,6 +83,7 @@ export function VesselsContent() {
 
   return (
     <div className="space-y-5 lg:space-y-7.5">
+      <SampleDataPageLine />
       <Toolbar>
         <ToolbarHeading>
           <ToolbarTitle>
@@ -149,7 +151,8 @@ export function VesselsContent() {
 
             {vesselsQuery.isSuccess && vesselsQuery.data.length > 0 && (
               <div className="overflow-x-auto">
-                <Table>
+                <SampleDataTable>
+                  <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t('vesselCode', { defaultValue: 'Code' })}</TableHead>
@@ -178,7 +181,8 @@ export function VesselsContent() {
                       </TableRow>
                     ))}
                   </TableBody>
-                </Table>
+                  </Table>
+                </SampleDataTable>
               </div>
             )}
           </CardContent>
