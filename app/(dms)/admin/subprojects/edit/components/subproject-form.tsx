@@ -11,7 +11,7 @@ import { VesselSelect } from '../../../../_components/vessel-select';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
-import { updateSubproject } from '@/lib/dms/mock-store';
+import { updateSubproject } from '@/lib/dms/store';
 import type {
   DmsActor,
   DmsSubproject,

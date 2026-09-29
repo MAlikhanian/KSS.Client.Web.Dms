@@ -7,9 +7,10 @@
  *       | Rejected  («قفل ویرایش برای اپراتور باز می‌شود و علت رد به عنوان
  *                     یادداشت ثبت می‌شود»)
  *
- * Pure: no storage, no clock of its own, no side effects. mock-store.ts calls
- * `transition` and persists what it returns; a component never reaches a
- * status write without coming through here.
+ * Pure: no storage, no clock of its own, no side effects. The SERVICE applies
+ * the workflow on every status change; the screens use `canTransition` and
+ * `canEditFields` here only to decide which buttons to offer, never as the
+ * control.
  *
  * The rules live in ONE function. `canTransition` — which the UI uses to grey
  * out buttons — is implemented by attempting `transition` and catching, so the

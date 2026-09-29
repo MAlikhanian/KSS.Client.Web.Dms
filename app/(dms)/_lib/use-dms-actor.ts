@@ -1,31 +1,40 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { getCurrentActor } from '@/lib/dms/session';
-import type { DmsActor } from '@/lib/dms/types';
+import { useSession } from 'next-auth/react';
+import { canActAs, resolveDmsAccess } from '@/lib/dms/access';
+import type { DmsActor, DmsRole } from '@/lib/dms/types';
 
 /**
- * The current DMS actor, resolved on the client after mount.
+ * The person using this screen, acting in the screen's own DMS role.
  *
- * The role lives in a cookie, so reading it during render would differ between
- * the server pass and the client pass and produce a hydration mismatch.
- * `ready` distinguishes "not resolved yet" from "resolved, and there is no
- * role" — those are different states and a screen that conflates them shows a
- * sign-in prompt for a fraction of a second to someone who is already signed
- * in.
+ * From the signed-in Auth session — the same role and permission claims the
+ * route guard and the service check (lib/dms/access.ts). A person may hold more
+ * than one DMS role; on a given screen they act in THAT screen's role, and only
+ * if they hold it (or have full access). Otherwise the actor is null and the
+ * screen shows its refusal.
  *
- * Folder is `_lib`, which the app router excludes from routing — it is inside
- * app/(dms)/ so it stays within the guarded tree, and a leading underscore
- * keeps it from becoming a route.
+ * `ready` is false while the session is still loading, so a screen does not
+ * flash a refusal at someone who is signed in.
+ *
+ * The service records the actor as the `personId`, from the token itself; this
+ * value is for display and for the screens' own button states only.
+ *
+ * Folder is `_lib`, which the app router excludes from routing.
  */
-export function useDmsActor(): { actor: DmsActor | null; ready: boolean } {
-  const [actor, setActor] = useState<DmsActor | null>(null);
-  const [ready, setReady] = useState(false);
+export function useDmsActor(role: DmsRole): { actor: DmsActor | null; ready: boolean } {
+  const { data: session, status } = useSession();
+  if (status === 'loading') return { actor: null, ready: false };
 
-  useEffect(() => {
-    setActor(getCurrentActor());
-    setReady(true);
-  }, []);
+  const user = session?.user;
+  const access = resolveDmsAccess({ roles: user?.roles, permissions: user?.permissions });
+  if (!user || !canActAs(access, role)) return { actor: null, ready: true };
 
-  return { actor, ready };
+  return {
+    actor: {
+      userId: user.personId ?? user.id ?? '',
+      userName: user.name ?? '',
+      role,
+    },
+    ready: true,
+  };
 }

@@ -25,7 +25,7 @@ import {
   listProjects,
   listReports,
   listStoppagesForReport,
-} from '@/lib/dms/mock-store';
+} from '@/lib/dms/store';
 import { ALL_REPORT_STATUSES, type ReportStatus } from '@/lib/dms/types';
 import {
   CyclesSection,
@@ -63,7 +63,7 @@ const ALL = 'all';
  */
 export function ReportsContent() {
   const { t } = useTranslation('dms');
-  const { actor, ready } = useDmsActor();
+  const { actor, ready } = useDmsActor('ProjectControl');
   const [projectId, setProjectId] = useState('');
   const [status, setStatus] = useState<ReportStatus | typeof ALL>(ALL);
   const [range, setRange] = useState<ReportDateRangeValue>({ from: '', to: '' });
@@ -129,7 +129,7 @@ export function ReportsContent() {
             <p className="text-sm text-muted-foreground">
               {t('reportsViewRoleBody', {
                 defaultValue:
-                  'Head office views the daily reports here. Change role to continue.',
+                  'Head office views the daily reports here. Your account does not hold this role.',
               })}
             </p>
           </CardContent>

@@ -37,8 +37,9 @@ import {
   listPersonnelAssignments,
   listProjects,
   listShifts,
-} from '@/lib/dms/mock-store';
+} from '@/lib/dms/store';
 import { useDmsActor } from '../../_lib/use-dms-actor';
+import { projectRoleName, useProjectRoles } from '../../_components/project-role-select';
 import { formatJalaliDate, todayIsoInTehran } from '../../_lib/jalali-date';
 
 /**
@@ -67,7 +68,8 @@ import { formatJalaliDate, todayIsoInTehran } from '../../_lib/jalali-date';
 export function PersonnelAssignmentsContent() {
   const { t } = useTranslation('dms');
   const queryClient = useQueryClient();
-  const { actor, ready } = useDmsActor();
+  const { actor, ready } = useDmsActor('ProjectControl');
+  const rolesQuery = useProjectRoles();
 
   const [projectId, setProjectId] = useState('');
   // Today, as the natural question. Editable, because "who was on this in
@@ -127,7 +129,7 @@ export function PersonnelAssignmentsContent() {
             <p className="text-sm text-muted-foreground">
               {t('projectControlOnlyBody', {
                 defaultValue:
-                  'Head office defines projects, vessels and personnel. Change role to continue.',
+                  'Head office defines projects, vessels and personnel. Your account does not hold this role.',
               })}
             </p>
           </CardContent>
@@ -323,7 +325,7 @@ export function PersonnelAssignmentsContent() {
                             */}
                             {person?.fullName ?? a.personnelId}
                           </TableCell>
-                          <TableCell>{a.roleId ?? '—'}</TableCell>
+                          <TableCell>{projectRoleName(rolesQuery.data, a.roleId)}</TableCell>
                           <TableCell>
                             {shift ? `${shift.name} (${shift.timeRangeText})` : '—'}
                           </TableCell>

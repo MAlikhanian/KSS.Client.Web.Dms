@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
-import { createSubproject, getProject } from '@/lib/dms/mock-store';
+import { createSubproject, getProject } from '@/lib/dms/store';
 import { useDmsActor } from '../../../_lib/use-dms-actor';
 import { VesselSelect } from '../../../_components/vessel-select';
 
@@ -31,7 +31,7 @@ export function CreateSubprojectContent() {
   const { t } = useTranslation('dms');
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { actor, ready } = useDmsActor();
+  const { actor, ready } = useDmsActor('ProjectControl');
   const searchParams = useSearchParams();
   const projectId = searchParams.get('projectId');
 

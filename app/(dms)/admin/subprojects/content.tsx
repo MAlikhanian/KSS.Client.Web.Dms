@@ -29,9 +29,8 @@ import {
 } from '@/components/ui/table';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
-import { listProjects, listSubprojects } from '@/lib/dms/mock-store';
+import { listProjects, listSubprojects } from '@/lib/dms/store';
 import { useDmsActor } from '../../_lib/use-dms-actor';
-import { SampleDataPageLine, SampleDataTable } from '../../_components/sample-data';
 
 /**
  * Subprojects list — ۲-۲ جدول زیرپروژه‌ها.
@@ -43,7 +42,7 @@ import { SampleDataPageLine, SampleDataTable } from '../../_components/sample-da
  */
 export function SubprojectsContent() {
   const { t } = useTranslation('dms');
-  const { actor, ready } = useDmsActor();
+  const { actor, ready } = useDmsActor('ProjectControl');
   const [projectId, setProjectId] = useState('');
   const [query, setQuery] = useState('');
 
@@ -83,7 +82,7 @@ export function SubprojectsContent() {
             <p className="text-sm text-muted-foreground">
               {t('projectControlOnlyBody', {
                 defaultValue:
-                  'Head office defines projects, vessels and personnel. Change role to continue.',
+                  'Head office defines projects, vessels and personnel. Your account does not hold this role.',
               })}
             </p>
           </CardContent>
@@ -94,7 +93,6 @@ export function SubprojectsContent() {
 
   return (
     <div className="space-y-5 lg:space-y-7.5">
-      <SampleDataPageLine />
       <Toolbar>
         <ToolbarHeading>
           <ToolbarTitle>
@@ -204,7 +202,6 @@ export function SubprojectsContent() {
               subprojectsQuery.isSuccess &&
               subprojectsQuery.data.length > 0 && (
                 <div className="overflow-x-auto">
-                  <SampleDataTable>
                     <Table>
                     <TableHeader>
                       <TableRow>
@@ -243,7 +240,6 @@ export function SubprojectsContent() {
                       ))}
                     </TableBody>
                     </Table>
-                  </SampleDataTable>
                 </div>
               )}
           </CardContent>

@@ -19,7 +19,7 @@ import {
   createStoppage,
   deleteStoppage,
   updateStoppage,
-} from '@/lib/dms/mock-store';
+} from '@/lib/dms/store';
 import { isKnownStoppageCategory } from '@/lib/dms/types';
 import type {
   DmsActor,
@@ -27,7 +27,6 @@ import type {
   ReportStatus,
 } from '@/lib/dms/types';
 import { StoppageForm, type StoppageDraft } from './stoppage-form';
-import { SampleDataPageLine, SampleDataTable } from './sample-data';
 
 /**
  * Section 3 — stoppages. Amber.
@@ -116,7 +115,6 @@ export function StoppagesSection({
 
   return (
     <Card>
-      <SampleDataPageLine />
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <span className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center text-white text-sm font-bold">
@@ -219,7 +217,6 @@ export function StoppagesSection({
 
         {!isLoading && !error && stoppages.length > 0 && (
           <div className="overflow-x-auto">
-            <SampleDataTable>
               <Table>
               <TableHeader>
                 <TableRow>
@@ -287,7 +284,6 @@ export function StoppagesSection({
                 })}
               </TableBody>
               </Table>
-            </SampleDataTable>
           </div>
         )}
       </CardContent>

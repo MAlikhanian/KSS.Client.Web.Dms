@@ -16,8 +16,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError, type DmsError } from '@/lib/dms/errors';
-import { createStoppageType } from '@/lib/dms/mock-store';
+import { createStoppageType } from '@/lib/dms/store';
 import { useDmsActor } from '../../../_lib/use-dms-actor';
+import { StoppageCategorySelect } from '../../../_components/stoppage-category-select';
 
 /**
  * A new downtime type — all four of Amir's columns.
@@ -35,12 +36,14 @@ export function CreateStoppageTypeContent() {
   const { t } = useTranslation('dms');
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { actor, ready } = useDmsActor();
+  const { actor, ready } = useDmsActor('ProjectControl');
 
   const [code, setCode] = useState('');
   const [category, setCategory] = useState('');
   const [name, setName] = useState('');
-  const [isPlanned, setIsPlanned] = useState(false);
+  // Follows the category, as the service requires: planned exactly when the
+  // category is Planned. Shown, never set by hand.
+  const isPlanned = category === 'Planned';
 
   const isValid =
     code.trim().length > 0 &&
@@ -138,18 +141,11 @@ export function CreateStoppageTypeContent() {
               {t('downtimeCategory', { defaultValue: 'Category' })}{' '}
               <span className="text-destructive">*</span>
             </label>
-            <Input
-              id="dt-category"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              placeholder={t('downtimeCategoryPlaceholder', {
-                defaultValue: 'e.g. Technical, Operational, Planned',
-              })}
-            />
+            <StoppageCategorySelect id="dt-category" value={category} onChange={setCategory} />
             <p className="text-xs text-muted-foreground">
               {t('downtimeCategoryNote', {
                 defaultValue:
-                  'The dashboard buckets technical and operational downtime by this value. A category outside those two is valid, and its time is reported separately rather than dropped.',
+                  'The dashboard buckets technical and operational downtime by this value.',
               })}
             </p>
           </div>
@@ -170,7 +166,7 @@ export function CreateStoppageTypeContent() {
             <Checkbox
               id="dt-planned"
               checked={isPlanned}
-              onCheckedChange={(checked) => setIsPlanned(checked === true)}
+              disabled
             />
             <label className="text-sm font-medium" htmlFor="dt-planned">
               {t('downtimeIsPlannedLabel', { defaultValue: 'Planned downtime' })}
@@ -179,7 +175,7 @@ export function CreateStoppageTypeContent() {
           <p className="text-xs text-muted-foreground">
             {t('downtimeIsPlannedNote', {
               defaultValue:
-                'A DEFAULT for stoppages logged with this type. The logged stoppage keeps its own value, and that is what T_PD is computed from.',
+                'Follows the category: a type in the Planned category is planned downtime. Stoppages logged with this type take this value.',
             })}
           </p>
         </CardContent>

@@ -41,8 +41,13 @@ const compat = new FlatCompat({
 // for exactly the tree the pages live in, while every rule still appeared
 // present in the file. Composing from one definition is what stops that.
 
+// ONE NETWORK PATH. DMS data comes from the DMS service through this zone's own
+// proxy, and exactly one file makes the call: lib/dms/http.ts (exempted below).
+// Every screen goes through lib/dms/store.ts, which goes through http.ts. A
+// second path — a component calling fetch — would bypass the error mapping the
+// screens rely on and the single place a cleared field becomes `null`.
 const NO_BACKEND_MESSAGE =
-  'DMS is frontend and mock data only, by product decision: no database, no backend service, no API calls for domain data. All data access goes through lib/dms/mock-store.ts. If this genuinely needs a backend it goes to the Tech Lead — not a workaround here.';
+  'DMS data access goes through lib/dms/store.ts, and only lib/dms/http.ts calls the network. A component calling fetch bypasses the error mapping every screen relies on. Add a store function instead.';
 
 const NO_BACKEND_GLOBALS = [
   { name: 'fetch', message: NO_BACKEND_MESSAGE },
@@ -57,7 +62,7 @@ const NO_BACKEND_IMPORT_PATTERNS = [
   {
     group: ['**/api-client', '**/lib/api', '**/services/auth-api'],
     message:
-      'DMS is frontend and mock data only: the template API clients are not a DMS data path. All data access goes through lib/dms/mock-store.ts.',
+      'The template API clients are not a DMS data path. All DMS data access goes through lib/dms/store.ts.',
   },
 ];
 
@@ -80,7 +85,7 @@ const NO_BRAND_CAST = {
   selector:
     "TSAsExpression TSTypeReference[typeName.name='ApprovedDailyReport']",
   message:
-    'Only lib/dms/mock-store.ts may produce an ApprovedDailyReport, via listApprovedReports(), which applies the Approved filter itself. Casting one into existence reintroduces the CashAdvance defect: a KPI total computed over unapproved rows.',
+    "Only lib/dms/store.ts may produce an ApprovedDailyReport, via listApprovedReports(), which reads the service's approved-only route. Casting one into existence reintroduces the CashAdvance defect: a KPI total computed over unapproved rows.",
 };
 
 // A computed i18n key is invisible to every check that looks for translated
@@ -203,14 +208,24 @@ const eslintConfig = [
     },
   },
 
-  // The single named exception: the store owns the brand, so it is the one
-  // file allowed to cast into it. Note this block deliberately RESTATES
-  // NO_MEMBER_FETCH — replacing rather than merging is the flat-config
-  // behaviour, so dropping the fetch rule here would have unguarded it.
+  // The store owns the brand, so it is the one file allowed to cast into it.
+  // This block deliberately RESTATES NO_MEMBER_FETCH — replacing rather than
+  // merging is the flat-config behaviour, so dropping the fetch rule here would
+  // have unguarded it.
   {
-    files: ['lib/dms/mock-store.ts'],
+    files: ['lib/dms/store.ts'],
     rules: {
       'no-restricted-syntax': ['error', NO_MEMBER_FETCH],
+    },
+  },
+
+  // The ONE file that calls the network. Only the fetch bans are lifted, and
+  // only here; the brand cast stays banned in it.
+  {
+    files: ['lib/dms/http.ts'],
+    rules: {
+      'no-restricted-globals': 'off',
+      'no-restricted-syntax': ['error', NO_BRAND_CAST],
     },
   },
 

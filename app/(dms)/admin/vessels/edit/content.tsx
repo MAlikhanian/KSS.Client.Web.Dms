@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
-import { getVessel } from '@/lib/dms/mock-store';
+import { getVessel } from '@/lib/dms/store';
 import { useDmsActor } from '../../../_lib/use-dms-actor';
 import { VesselForm } from './components';
 
@@ -28,7 +28,7 @@ import { VesselForm } from './components';
  */
 export function EditVesselContent() {
   const { t } = useTranslation('dms');
-  const { actor, ready } = useDmsActor();
+  const { actor, ready } = useDmsActor('ProjectControl');
   const searchParams = useSearchParams();
   const id = searchParams.get('id');
 

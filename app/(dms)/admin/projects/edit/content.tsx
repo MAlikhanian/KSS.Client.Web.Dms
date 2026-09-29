@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
-import { getProject } from '@/lib/dms/mock-store';
+import { getProject } from '@/lib/dms/store';
 import { useDmsActor } from '../../../_lib/use-dms-actor';
 import { ProjectForm } from './components';
 
@@ -27,7 +27,7 @@ import { ProjectForm } from './components';
  */
 export function EditProjectContent() {
   const { t } = useTranslation('dms');
-  const { actor, ready } = useDmsActor();
+  const { actor, ready } = useDmsActor('ProjectControl');
   const searchParams = useSearchParams();
   const id = searchParams.get('id');
 
@@ -121,7 +121,7 @@ export function EditProjectContent() {
         </Card>
       )}
 
-      {/* FAILURE PATH — a stale link, or the seeded fault project. Rendered as
+      {/* FAILURE PATH — a stale link, or a refusal from the service. Rendered as
           itself rather than as an empty form, which would look like a project
           with no data. */}
       {id && projectQuery.isError && (

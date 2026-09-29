@@ -24,7 +24,7 @@ import {
   createReport,
   listProjects,
   listReports,
-} from '@/lib/dms/mock-store';
+} from '@/lib/dms/store';
 import type { DmsDailyOperationReport } from '@/lib/dms/types';
 import { useDmsActor } from '../_lib/use-dms-actor';
 import { DailyReportForm } from './components';
@@ -34,15 +34,15 @@ import { formatJalaliDate, todayIsoInTehran } from '../_lib/jalali-date';
  * Operator screen — §1: «ثبت گزارش روزانه، چرخه‌های عملیاتی و توقفات مربوط به
  * شناورِ تخصیص‌یافته به پروژه خود. امکان ویرایش اطلاعات تا پیش از ارسال».
  *
- * THE FAILURE PATHS ARE BUILT HERE, NOT LATER. The seeded project that fails
- * to load and the project with no days both render as themselves — a UI whose
+ * THE FAILURE PATHS ARE BUILT HERE, NOT LATER. A project whose days fail to
+ * load and a project with no days both render as themselves — a UI whose
  * only path is the happy one gets its error states written under pressure, and
  * by then they are the least-tested code in the app.
  */
 export function DailyReportContent() {
   const { t } = useTranslation('dms');
   const queryClient = useQueryClient();
-  const { actor, ready } = useDmsActor();
+  const { actor, ready } = useDmsActor('Operator');
   const [projectId, setProjectId] = useState<string>('');
   const [openReportId, setOpenReportId] = useState<string | null>(null);
 
@@ -85,7 +85,7 @@ export function DailyReportContent() {
         })}
         body={t('operatorOnlyBody', {
           defaultValue:
-            'Only the vessel operator enters a daily report. Change role to continue.',
+            'Only the vessel operator enters a daily report. Your account does not hold this role.',
         })}
       />
     );

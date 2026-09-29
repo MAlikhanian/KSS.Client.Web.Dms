@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
-import { createProject } from '@/lib/dms/mock-store';
+import { createProject } from '@/lib/dms/store';
 import { useDmsActor } from '../../../_lib/use-dms-actor';
 
 /**
@@ -33,7 +33,7 @@ export function CreateProjectContent() {
   const { t } = useTranslation('dms');
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { actor, ready } = useDmsActor();
+  const { actor, ready } = useDmsActor('ProjectControl');
 
   const [contractNumber, setContractNumber] = useState('');
   const [contractSubject, setContractSubject] = useState('');

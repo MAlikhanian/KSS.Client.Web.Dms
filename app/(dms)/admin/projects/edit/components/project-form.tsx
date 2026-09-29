@@ -11,7 +11,7 @@ import { DmsDateInput } from '../../../../_components/dms-date-input';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
-import { updateProject } from '@/lib/dms/mock-store';
+import { updateProject } from '@/lib/dms/store';
 import type { DmsActor, DmsProject, ProjectPatch } from '@/lib/dms/types';
 import { parseOptionalNumber, toEnglishDigits } from '../../../../_lib/digits';
 import { SECTION_COLOUR } from '../../../../_lib/section-colour';

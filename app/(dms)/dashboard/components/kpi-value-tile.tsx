@@ -1,7 +1,6 @@
 'use client';
 
 import { Card, CardContent } from '@/components/ui/card';
-import { SampleDataWatermark } from '../../_components/sample-data';
 import type { KpiResult } from '@/lib/dms/kpi';
 import { KpiGapTile, KpiUnavailableTile } from './kpi-gap-tile';
 
@@ -66,7 +65,6 @@ export function KpiFigureTile({
     <Card>
       <CardContent className="relative py-5 space-y-2">
         {/* Marked at the COMPONENT, so no tile call site can be forgotten. */}
-        <SampleDataWatermark />
         <div className="text-sm font-medium">{label}</div>
         <div className="text-2xl font-semibold">
           {shown}{' '}
@@ -115,7 +113,6 @@ export function KpiQuantityTile({
     <Card>
       <CardContent className="relative py-5 space-y-1">
         {/* Marked at the COMPONENT, so no tile call site can be forgotten. */}
-        <SampleDataWatermark />
         <div className="text-sm font-medium">{label}</div>
         <div className="text-2xl font-semibold">
           {value}

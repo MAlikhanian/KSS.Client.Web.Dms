@@ -35,7 +35,7 @@ export default function DmsForbiddenPage() {
                 <p className="text-sm text-muted-foreground">
                   {t('forbiddenBody', {
                     defaultValue:
-                      'Each DMS role sees a different part of the system. Switch role to continue.',
+                      'Each DMS role sees a different part of the system. Your account does not hold the role this page needs.',
                   })}
                 </p>
                 {(from || role) && (
@@ -55,8 +55,8 @@ export default function DmsForbiddenPage() {
                 <Button asChild variant="outline">
                   {/* No '/dms' prefix: Next adds basePath to Link itself. */}
                   <Link href="/">
-                    {t('backToRolePicker', {
-                      defaultValue: 'Change role',
+                    {t('backToHome', {
+                      defaultValue: 'My screens',
                     })}
                   </Link>
                 </Button>

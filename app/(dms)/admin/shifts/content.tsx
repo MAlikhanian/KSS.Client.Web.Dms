@@ -20,13 +20,13 @@ import {
 } from '@/components/ui/table';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
-import { listShifts } from '@/lib/dms/mock-store';
+import { listShifts } from '@/lib/dms/store';
 import { useDmsActor } from '../../_lib/use-dms-actor';
 
 /**
  * FRD «شیفت» — the shift reference table, unnumbered under ۲-۶.
  *
- * ⛔ HE POPULATES THIS AND THE TWO SEEDED ROWS ARE NOT THE SET. His column
+ * ⛔ HE POPULATES THIS AND THE SEEDED ROWS ARE NOT THE SET. His column
  * reads «نام شیفت | متنی | مثال: روز، شب» — «مثال» marks those as EXAMPLES,
  * exactly as «و غیره» does on vessel types and «مانند فنی، عملیاتی» on stoppage
  * categories. The screen therefore offers Add and does not present the seeds as
@@ -45,7 +45,7 @@ import { useDmsActor } from '../../_lib/use-dms-actor';
  */
 export function ShiftsContent() {
   const { t } = useTranslation('dms');
-  const { actor, ready } = useDmsActor();
+  const { actor, ready } = useDmsActor('ProjectControl');
 
   const shiftsQuery = useQuery({
     queryKey: ['dms', 'shifts'],
@@ -77,7 +77,7 @@ export function ShiftsContent() {
             <p className="text-sm text-muted-foreground">
               {t('projectControlOnlyBody', {
                 defaultValue:
-                  'Head office defines projects, vessels and personnel. Change role to continue.',
+                  'Head office defines projects, vessels and personnel. Your account does not hold this role.',
               })}
             </p>
           </CardContent>

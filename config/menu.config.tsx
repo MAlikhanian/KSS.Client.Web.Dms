@@ -54,9 +54,7 @@ import {
 } from 'lucide-react';
 import { type MenuConfig } from './types';
 import { translateMenuItems } from '@/lib/menu-translation-utils';
-import { DMS_MENU_ENTRIES, DMS_MENU_PARENT_TITLE } from '@/lib/dms/menu';
-import { filterDmsMenuByRole } from '@/lib/dms/menu-filter';
-import { getCurrentRole } from '@/lib/dms/session';
+import { DMS_MENU_PARENT_TITLE, dmsMenuItems } from '@/lib/dms/menu';
 
 /**
  * ⚠ THIS ARRAY HAS BEEN CUT DOWN FOR DMS, AND WHAT IS MISSING IS MISSING ON
@@ -1250,19 +1248,19 @@ const buildMenuDms = (
     // t() would give it a second home and a way to drift from his bytes.
     title: DMS_MENU_PARENT_TITLE,
     icon: Ship,
-    // Filtered to the current role. The cookie read happens HERE, in the
-    // caller, so `filterDmsMenuByRole` stays pure and testable without a
-    // browser — the harness exercises the real function, not a stand-in.
+    // Each entry carries the estate's own `roles` + `permissions` fields, and
+    // the sidebar's filterMenuByRole matches them against the SIGNED-IN SESSION
+    // — the same role and permission claims the route guard reads.
     //
-    // ⛔ THIS IS NOT AN ACCESS CONTROL AND MUST NOT BE MISTAKEN FOR ONE.
-    // The routes are gated in middleware.ts; this only stops the menu
-    // offering a role screens it will be refused. It fails OPEN by design:
-    // no cookie means the whole menu, because an empty sidebar is a worse
-    // failure than an over-full one. Hiding a link is not preventing access.
-    children: filterDmsMenuByRole(DMS_MENU_ENTRIES, getCurrentRole()).map((entry) => ({
-      title: t('dms:' + entry.titleKey, { defaultValue: entry.title }),
-      path: entry.path,
-    })),
+    // ⛔ IT FAILS CLOSED. No session, no DMS role, or no Dms.Read: no entry, and
+    // with every child gone the estate filter drops this heading too. Nothing
+    // renders before the session is known, rather than everything.
+    //
+    // ⚠ Full-access roles are listed on every entry but still need Dms.Read to
+    // see it here (the estate filter requires a role AND a permission). Until
+    // they are granted it, they reach DMS by URL — the guard admits them — and
+    // the menu never offers anything the guard would refuse.
+    children: dmsMenuItems((entry) => t('dms:' + entry.titleKey, { defaultValue: entry.title })),
   },
 ];
 

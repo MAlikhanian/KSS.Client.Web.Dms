@@ -12,7 +12,6 @@ import {
   YAxis,
 } from 'recharts';
 import { Card, CardContent } from '@/components/ui/card';
-import { SampleDataWatermark } from '../../_components/sample-data';
 import type { CauseBar, TimeShareSlice } from '../chart-data';
 
 /**
@@ -72,7 +71,6 @@ export function TimeShareChart({
         ) : (
           <div className="relative h-64">
             {/* INSIDE the figure's box — a crop of the chart contains it. */}
-            <SampleDataWatermark />
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -131,7 +129,6 @@ export function StoppageByCauseChart({
           <Empty text={emptyText} />
         ) : (
           <div className="relative" style={{ height }}>
-            <SampleDataWatermark />
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 layout="vertical"
@@ -179,7 +176,6 @@ export function PhysicalProgressPanel({
           <Empty text={noDenominatorText} />
         ) : (
           <div className="relative space-y-2">
-            <SampleDataWatermark />
             <div className="text-2xl font-semibold">{percent.toFixed(1)}%</div>
             <div className="h-3 w-full rounded-full bg-muted">
               <div

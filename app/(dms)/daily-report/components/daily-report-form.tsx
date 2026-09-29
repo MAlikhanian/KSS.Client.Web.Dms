@@ -6,7 +6,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import {
   listCyclesForReport,
   listStoppagesForReport,
-} from '@/lib/dms/mock-store';
+} from '@/lib/dms/store';
 import type { DmsActor, DmsDailyOperationReport } from '@/lib/dms/types';
 import { canEditFields } from '@/lib/dms/workflow';
 import { CyclesSection, StoppagesSection } from '../../_components';

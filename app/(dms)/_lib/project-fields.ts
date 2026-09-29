@@ -78,7 +78,7 @@ export const PROJECT_SECTIONS: ReadonlyArray<{
   // scalars ARE flat fields, so blue was correct-but-uninformative. Amber says
   // which KIND they are.
   { id: 'amounts', number: 5, label: 'Amounts and factors', colour: 'amber' },
-  { id: 'guarantees', number: 6, label: 'Guarantees and adjustment', colour: 'amber' },
+  { id: 'guarantees', number: 6, label: 'Adjustment', colour: 'amber' },
 ];
 
 export const PROJECT_FIELDS: readonly ProjectFieldDef[] = [
@@ -88,6 +88,10 @@ export const PROJECT_FIELDS: readonly ProjectFieldDef[] = [
   { key: 'executionArea', required: true, kind: 'text', label: 'Execution area', specLabel: 'حوزه اجرایی پیمان/قرارداد', section: 'identity' },
   { key: 'projectType', kind: 'text', label: 'Project type', specLabel: 'نوع پروژه', section: 'identity' },
   { key: 'initialDredgingVolumeM3', required: true, kind: 'number', label: 'Initial dredging volume (m³)', specLabel: 'حجم اولیه عملیات لایروبی', section: 'identity' },
+  // The contract's volume after its latest approved change — the earned-value
+  // basis when the contract has been amended. Worded to mirror the FRD's own
+  // amount field «مبلغ قرارداد پس از آخرین تغییرات تایید شده».
+  { key: 'amendedDredgingVolumeM3', kind: 'number', label: 'Dredging volume after the latest approved changes (m³)', specLabel: 'حجم لایروبی پس از آخرین تغییرات تایید شده', section: 'identity' },
   { key: 'workSummary', kind: 'longtext', label: 'Work summary', specLabel: 'شرح مختصر کار و اهداف قرارداد', section: 'identity' },
   { key: 'geographicScope', kind: 'longtext', label: 'Geographic scope', specLabel: 'محدوده جغرافیایی اجرای کار', section: 'identity' },
 
@@ -131,10 +135,9 @@ export const PROJECT_FIELDS: readonly ProjectFieldDef[] = [
   { key: 'advancePaymentPercent', kind: 'number', label: 'Advance payment (%)', specLabel: 'درصد پیش‌پرداخت', section: 'amounts' },
   { key: 'estimateCriterionType', kind: 'text', label: 'Estimate criterion type', specLabel: 'نوع معیار برآورد', section: 'amounts' },
 
-  // ── 6. Guarantees and adjustment (7) ──
-  { key: 'performanceBondAmount', kind: 'number', label: 'Performance bond amount', specLabel: 'مبلغ ضمانت‌نامه حسن انجام کار', section: 'guarantees' },
-  { key: 'performanceBondNumber', kind: 'text', label: 'Performance bond number', specLabel: 'شماره ضمانت‌نامه حسن انجام کار', section: 'guarantees' },
-  { key: 'performanceBondExpiryDate', kind: 'date', label: 'Performance bond expiry', specLabel: 'تاریخ اعتبار ضمانت‌نامه', section: 'guarantees' },
+  // ── 6. Adjustment (4) ──
+  // The customer removed the guarantee boxes; the section id stays 'guarantees'
+  // so its i18n key is unchanged, while its visible title is «تعدیل».
   { key: 'performanceRetentionPercent', kind: 'number', label: 'Performance retention (%)', specLabel: 'درصد کسور حسن انجام کار', section: 'guarantees' },
   { key: 'hasAdjustment', kind: 'boolean', label: 'Subject to adjustment', specLabel: 'آیا تعدیل دارد یا خیر', section: 'guarantees' },
   { key: 'adjustmentBaseIndex', kind: 'text', label: 'Adjustment base index', specLabel: 'شاخص مبنای تعدیل', section: 'guarantees' },

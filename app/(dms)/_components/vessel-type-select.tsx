@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useTranslation } from '@/hooks/useTranslation';
-import { listVesselTypes } from '@/lib/dms/mock-store';
+import { listVesselTypes } from '@/lib/dms/store';
 import type { DmsVesselType } from '@/lib/dms/types';
 
 /** Radix Select cannot carry '' as an item value, so "no type" needs a sentinel. */
@@ -32,7 +32,7 @@ export function vesselTypeLabel(
   if (!code) return '—';
   const row = types?.find((t) => t.code === code);
   if (!row) return code;
-  return language === 'en' ? row.nameEn : row.name;
+  return language === 'en' ? (row.nameEn ?? row.name) : row.name;
 }
 
 /**
@@ -77,7 +77,7 @@ export function VesselTypeSelect({
         </SelectItem>
         {types.map((row) => (
           <SelectItem key={row.code} value={row.code}>
-            {i18n.language === 'en' ? row.nameEn : row.name}
+            {i18n.language === 'en' ? (row.nameEn ?? row.name) : row.name}
           </SelectItem>
         ))}
         {unknown && (

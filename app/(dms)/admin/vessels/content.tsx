@@ -22,9 +22,8 @@ import {
 } from '@/components/ui/table';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
-import { listVessels } from '@/lib/dms/mock-store';
+import { listVessels } from '@/lib/dms/store';
 import { useDmsActor } from '../../_lib/use-dms-actor';
-import { SampleDataPageLine, SampleDataTable } from '../../_components/sample-data';
 import { useVesselTypes, vesselTypeLabel } from '../../_components/vessel-type-select';
 
 /**
@@ -40,7 +39,7 @@ import { useVesselTypes, vesselTypeLabel } from '../../_components/vessel-type-s
  */
 export function VesselsContent() {
   const { t, i18n } = useTranslation('dms');
-  const { actor, ready } = useDmsActor();
+  const { actor, ready } = useDmsActor('ProjectControl');
   const typesQuery = useVesselTypes();
   const [query, setQuery] = useState('');
 
@@ -74,7 +73,7 @@ export function VesselsContent() {
             <p className="text-sm text-muted-foreground">
               {t('projectControlOnlyBody', {
                 defaultValue:
-                  'Head office defines projects, vessels and personnel. Change role to continue.',
+                  'Head office defines projects, vessels and personnel. Your account does not hold this role.',
               })}
             </p>
           </CardContent>
@@ -85,7 +84,6 @@ export function VesselsContent() {
 
   return (
     <div className="space-y-5 lg:space-y-7.5">
-      <SampleDataPageLine />
       <Toolbar>
         <ToolbarHeading>
           <ToolbarTitle>
@@ -153,7 +151,6 @@ export function VesselsContent() {
 
             {vesselsQuery.isSuccess && vesselsQuery.data.length > 0 && (
               <div className="overflow-x-auto">
-                <SampleDataTable>
                   <Table>
                   <TableHeader>
                     <TableRow>
@@ -184,7 +181,6 @@ export function VesselsContent() {
                     ))}
                   </TableBody>
                   </Table>
-                </SampleDataTable>
               </div>
             )}
           </CardContent>

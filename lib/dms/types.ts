@@ -5,10 +5,9 @@
  * (i18n/dms/fa.json) and never appears in code. Internally this is DMS
  * everywhere: slug, folder, identifiers.
  *
- * SCOPE: frontend and mock data only. There is no database and no backend
- * service behind these types. They describe the shape the eventual API will
- * return, so that swapping lib/dms/mock-store.ts for real calls is one line
- * per function rather than a rewrite of every call site.
+ * SCOPE: these are the shapes the DMS service returns and accepts, field for
+ * field (lib/dms/store.ts reads them over HTTP). An optional field is ABSENT
+ * when empty: the store removes the service's nulls before a screen sees them.
  *
  * ⛔ PROVENANCE DESCRIBES WHERE A TERM CAME FROM. IT IS NOT A SCOPE FOR
  * CHECKING ANYTHING, AND MUST NOT BE USED AS ONE.
@@ -114,46 +113,12 @@ export interface DmsActor {
  * Seven values, given as Persian labels only.
  */
 /**
- * ۲-۶'s seven project roles, as VALUES — the type is derived from them.
- *
- * It was a type-only union until ۲-۶ needed a role picker. A screen needs the
- * seven at runtime, and the obvious move is to write them out again in the
- * component; then there are two lists, they agree on the day they are written,
- * and nothing ever checks them again. Deriving the type from the array is the
- * same reasoning as `dmsRoles` in `lib/dms/menu.ts`: two lists that agree are
- * a convention, one list is a control.
- *
- * The union it produces is character-for-character what was declared before,
- * so this is a change of form and not of meaning.
+ * ۲-۶'s project roles are an EDITABLE TABLE in the service (the customer asked
+ * for roles to be added and edited), seeded with the seven the specification
+ * names. They are read with listProjectRoles and are not a constant here: a
+ * constant list would disagree with the table the day a role is added.
+ * See DmsProjectRoleRow.
  */
-export const DMS_PROJECT_ROLES = [
-  'SiteSupervisor', // PROPOSED — name ours, FRD ۲-۶ «سرپرست کارگاه»
-  'ExecutionOfficer', // PROPOSED — name ours, FRD ۲-۶ «مسئول اجرا»
-  'MachineManager', // PROPOSED — name ours, FRD ۲-۶ «مدیر ماشین»
-  'DredgeOperator', // PROPOSED — name ours, FRD ۲-۶ «اپراتور لایروب»
-  'Motorman', // PROPOSED — name ours, FRD ۲-۶ «موتوریست»
-  'Sailor', // PROPOSED — name ours, FRD ۲-۶ «ملوان»
-  'Welder', // PROPOSED — name ours, FRD ۲-۶ «جوشکار»
-] as const;
-
-export type DmsProjectRole = (typeof DMS_PROJECT_ROLES)[number];
-
-/**
- * The derived type still equals the union that was written by hand, in BOTH
- * directions. This is what makes the change above safe rather than merely
- * plausible — remove a role from the array and this stops compiling, so the
- * two cannot part company silently.
- */
-export const PROJECT_ROLES_UNCHANGED: AssertEqual<
-  DmsProjectRole,
-  | 'SiteSupervisor'
-  | 'ExecutionOfficer'
-  | 'MachineManager'
-  | 'DredgeOperator'
-  | 'Motorman'
-  | 'Sailor'
-  | 'Welder'
-> = true;
 
 // ─── Workflow status ────────────────────────────────────────────────────────
 
@@ -201,9 +166,13 @@ export const ALL_REPORT_STATUSES: readonly ReportStatus[] = [
 export type StoppageCategory = string;
 
 /**
- * The three the FRD offers as examples. A value outside this list is valid
- * data, not an error — that is why this is a list to check against and not a
- * type to validate by.
+ * The three stoppage-type categories. The FRD offered them as examples; the
+ * customer has since fixed them as the complete set, and the service refuses
+ * anything else on a stoppage TYPE (the store does too).
+ *
+ * `StoppageCategory` stays `string` and `isKnownStoppageCategory` stays a
+ * check, because rows written while the category was free text still exist and
+ * must be shown as they are, not re-typed out of existence.
  */
 export const KNOWN_STOPPAGE_CATEGORIES = [
   'Technical', // PROPOSED — name ours, FRD ۲-۹ «فنی» (example value)
@@ -254,6 +223,13 @@ export interface DmsProject {
   contractSubject: string; // PROPOSED — name ours, FRD ۲-۱ «موضوع پیمان/قرارداد»
   executionArea: string; // PROPOSED — name ours, FRD ۲-۱ «حوزه اجرایی پیمان/قرارداد»
   initialDredgingVolumeM3: number; // PROPOSED — name ours, FRD ۲-۱ «حجم اولیه عملیات لایروبی»
+  /**
+   * The CONTRACT's dredging volume after its latest approved change. The
+   * customer's rule for the earned-value basis: if the contract amount or
+   * volume is amended, the amended value is used. Not the monthly volume
+   * correction, which is a separate record.
+   */
+  amendedDredgingVolumeM3?: number;
   workSummary?: string; // PROPOSED — name ours, FRD ۲-۱ «شرح مختصر کار و اهداف قرارداد»
   geographicScope?: string; // PROPOSED — name ours, FRD ۲-۱ «محدوده جغرافیایی اجرای کار»
   attachedMaps?: string; // PROPOSED — name ours, FRD ۲-۱ «نقشه‌های منضم به قرارداد»
@@ -280,9 +256,6 @@ export interface DmsProject {
   regionalFactor?: number; // PROPOSED — name ours, FRD ۲-۱ «ضریب منطقه‌ای»
   finalPaymentCertificateAmount?: number; // PROPOSED — name ours, FRD ۲-۱ «مبلغ صورت‌وضعیت یا گواهی پرداخت نهایی»
   finalAdjustmentCertificateAmount?: number; // PROPOSED — name ours, FRD ۲-۱ «مبلغ صورت‌وضعیت یا گواهی تعدیل نهایی»
-  performanceBondAmount?: number; // PROPOSED — name ours, FRD ۲-۱ «مبلغ ضمانت‌نامه حسن انجام کار»
-  performanceBondExpiryDate?: string; // PROPOSED — name ours, FRD ۲-۱ «تاریخ اعتبار ضمانت‌نامه»
-  performanceBondNumber?: string; // PROPOSED — name ours, FRD ۲-۱ «شماره ضمانت‌نامه حسن انجام کار»
   performanceRetentionPercent?: number; // PROPOSED — name ours, FRD ۲-۱ «درصد کسور حسن انجام کار»
   estimateCriterionType?: string; // PROPOSED — name ours, FRD ۲-۱ «نوع معیار برآورد»
   advancePaymentPercent?: number; // PROPOSED — name ours, FRD ۲-۱ «درصد پیش‌پرداخت»
@@ -296,19 +269,13 @@ export interface DmsProject {
   warrantyEndDate?: string; // PROPOSED — name ours, FRD ۲-۱ «تاریخ پایان دوره تضمین»
   finalHandoverDate?: string; // PROPOSED — name ours, FRD ۲-۱ «تاریخ تحویل قطعی»
 
-  /**
-   * Demo-only fault switch. Marks the one seeded project whose reads fail, so
-   * the error path exists from day one and is deterministic rather than
-   * random. Never sent to a real API.
-   */
-  simulateUnavailable?: boolean; // PROPOSED — not in FRD (mock only)
 }
 
 /**
  * NOTE — there is deliberately NO `vesselId` here. ۲-۴ makes the assignment
  * row the record of the one-to-one, and its `project_id` is UNIQUE. Two
  * records holding the same truth can disagree with nothing failing, so the
- * link is read through mock-store's getProjectVessel({ projectId }).
+ * link is read through the store's getProjectVessel({ projectId }).
  */
 
 // ─── ۲-۲ جدول زیرپروژه‌ها ───────────────────────────────────────────────────
@@ -397,14 +364,15 @@ export interface DmsVessel {
 
 /**
  * The vessel-types lookup. Same shape as the API's `GET vessel-types`, so the
- * swap stays one line. Seeded with the four types the customer named.
+ * call stays one line. The service seeds the four types the customer named.
  */
 export interface DmsVesselType {
   id: string;
   code: string;
   /** Persian name, as the customer wrote it. */
   name: string;
-  nameEn: string;
+  /** Absent when the type has no English name. */
+  nameEn?: string;
   sortOrder: number;
   isActive: boolean;
 }
@@ -472,15 +440,16 @@ export interface DmsPersonnel {
  *     `project_id`.
  *  2. It marks «شناسه پرسنل» as «کلید اصلی» — the primary key — which would
  *     allow one assignment per person across all projects.
- * `projectId` below is therefore ours, added so the mock can answer "who is on
- * this project"; it is marked as ours so the swap knows it was not in ۲-۶.
+ * `projectId` below is therefore ours, added so the store can answer "who is on
+ * this project"; it is marked as ours because it was not in ۲-۶.
  */
 export interface DmsPersonnelAssignment {
   id: string; // PROPOSED — not in FRD
   personnelId: string; // PROPOSED — name ours, FRD ۲-۶ «شناسه پرسنل» (marked «کلید اصلی» — see note)
   projectId: string; // PROPOSED — not in FRD (۲-۶ has no project column; see note)
   shiftId?: string; // PROPOSED — name ours, FRD ۲-۶ «شناسه شیفت»
-  roleId?: DmsProjectRole; // PROPOSED — name ours, FRD ۲-۶ «شناسه نقش»
+  /** A project-role CODE from the editable project-roles table (listProjectRoles). */
+  roleId?: string; // PROPOSED — name ours, FRD ۲-۶ «شناسه نقش»
 
   /**
    * The assignment window. `endDate` absent means OPEN — still assigned.
@@ -621,8 +590,8 @@ export interface DmsDailyOperationReport {
  *
  * There is no `report_id` in ۲-۸: the source links a cycle to its day by
  * «تاریخ» alone. Our `reportId` is ours, and cycles are reached only through
- * mock-store's listCyclesForReport() — so if the swap turns out to link by
- * date, that is a change inside the store and no call site moves.
+ * the store's listCyclesForReport() — the service links them by report, and
+ * no call site depends on how.
  */
 export interface DmsCycle {
   id: string; // PROPOSED — not in FRD
@@ -704,14 +673,14 @@ declare const approvedBrand: unique symbol;
  * property whose absence produced the CashAdvance total that included
  * rejected invoices.
  *
- * THE ONLY WAY TO OBTAIN ONE is mock-store's listApprovedReports(), which
- * applies the filter itself. No other store function returns this type —
+ * THE ONLY WAY TO OBTAIN ONE is the store's listApprovedReports(), which reads
+ * the service's approved-only route. No other store function returns this type —
  * listReports() does not, even when every row it happens to return is
  * approved.
  *
  * The one remaining way past it is `x as ApprovedDailyReport`, since a cast
  * defeats any brand. That cast is banned by the zone's own eslint config
- * everywhere except mock-store.ts, so the deliberate path fails
+ * everywhere except lib/dms/store.ts, so the deliberate path fails
  * `npm run lint` and removing the ban is a visible diff in a file that is ours.
  */
 export type ApprovedDailyReport = DmsDailyOperationReport & {
@@ -746,12 +715,8 @@ export interface ProjectQuery {
  * the build rather than being refused at runtime. Same instrument as
  * `VesselPatch`.
  *
- * `simulateUnavailable` is excluded too: it is the mock's fault switch, not a
- * field of the record, and it must never be settable from a screen.
  */
-export type ProjectPatch = Partial<
-  Omit<DmsProject, 'id' | 'projectCode' | 'simulateUnavailable'>
->;
+export type ProjectPatch = Partial<Omit<DmsProject, 'id' | 'projectCode'>>;
 
 export interface ProjectRef {
   projectId: string;
@@ -798,7 +763,7 @@ export type VesselPatch = Partial<Omit<DmsVessel, 'id' | 'vesselCode'>>;
 // a required column and leave the stored record structurally invalid — while
 // every line of it typechecks.
 //
-// The store refuses that (see mock-store), and the list it refuses against is
+// The service refuses that, and the list the forms check against is
 // DERIVED here rather than hand-maintained. A hand-written list is two
 // definitions that agree today: add a required column to DmsProject and
 // nothing would make anyone mark it.
@@ -936,6 +901,71 @@ export interface DmsStoppageType {
    * lookup a default — it does not move the field.
    */
   isPlanned: boolean; // AMIR msg 194 — «Is Planned (Yes/No/Boolean)»
+  /** An inactive type stays on old stoppages but cannot be picked for a new one. */
+  isActive?: boolean;
+}
+
+/** What a project-role edit may change. The code is fixed once the role exists. */
+export type ProjectRolePatch = Partial<Pick<DmsProjectRoleRow, 'name' | 'sortOrder' | 'isActive'>>;
+
+/** A row of the editable project-roles table (the service's GET project-roles). */
+export interface DmsProjectRoleRow {
+  id: string;
+  /** Fixed once created; what an assignment's `roleId` holds. */
+  code: string;
+  name: string;
+  sortOrder: number;
+  isActive: boolean;
+}
+
+/** The caller as the DMS service sees them (GET me). */
+export interface DmsMe {
+  personId: string;
+  companyId: string;
+  roles: DmsRole[];
+  fullAccess: boolean;
+}
+
+/** One KPI as the service computes it. A figure the service cannot state is `not-applicable` with its reason. */
+export type DmsKpiResult =
+  | { kind: 'value'; value: number; unit: string; basis: string; basisCode?: string; params?: Record<string, string> }
+  | { kind: 'not-applicable'; reason: string; reasonCode?: string; params?: Record<string, string> };
+
+/**
+ * The dashboard, computed by the service from APPROVED reports only (GET
+ * dashboard). The same shape the service returns; nothing is re-derived here.
+ */
+export interface DmsDashboard {
+  scope: { projectId: string | null; vesselId: string | null; from: string | null; to: string | null };
+  included: { projectId: string; projectCode: string }[];
+  excluded: { projectId: string; code: string }[];
+  totals: {
+    reportCount: number;
+    cycleCount: number;
+    cycleMinutes: number;
+    operatingMinutes: number;
+    phaseMinutes: { dredging: number; transport: number; discharge: number; return: number };
+    plannedStoppageMinutes: number;
+    unplannedStoppageMinutes: number;
+    availableMinutes: number;
+    technicalStoppageMinutes: number;
+    operationalStoppageMinutes: number;
+    plannedCategoryStoppageMinutes: number;
+    unclassifiedStoppageMinutes: number;
+    dredgedVolumeM3: number;
+    cyclesWithoutVolume: number;
+  };
+  kpis: {
+    availabilityPercent: DmsKpiResult;
+    technicalStoppagePercent: DmsKpiResult;
+    operationalStoppagePercent: DmsKpiResult;
+    stoppageOutsideAvailabilityMinutes: DmsKpiResult;
+    meanCycleTime: DmsKpiResult;
+    meanDailyDredgedVolume: DmsKpiResult;
+    physicalProgressPercent: DmsKpiResult;
+  };
+  timeShare: { key: 'Dredging' | 'Transport' | 'Discharge' | 'Return' | 'Stoppage'; minutes: number }[];
+  stoppagesByCause: { bars: { code: string; name: string | null; minutes: number }[]; unknownTypeMinutes: number };
 }
 
 export interface StoppageTypeQuery {

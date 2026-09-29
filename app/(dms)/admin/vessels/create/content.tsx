@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
-import { createVessel } from '@/lib/dms/mock-store';
+import { createVessel } from '@/lib/dms/store';
 import { useDmsActor } from '../../../_lib/use-dms-actor';
 import { VesselTypeSelect } from '../../../_components/vessel-type-select';
 
@@ -38,7 +38,7 @@ export function CreateVesselContent() {
   const { t } = useTranslation('dms');
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { actor, ready } = useDmsActor();
+  const { actor, ready } = useDmsActor('ProjectControl');
 
   const [name, setName] = useState('');
   const [vesselType, setVesselType] = useState('');

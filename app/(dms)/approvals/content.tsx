@@ -25,7 +25,7 @@ import {
   listProjects,
   listReports,
   listStoppagesForReport,
-} from '@/lib/dms/mock-store';
+} from '@/lib/dms/store';
 import {
   CyclesSection,
   ReportDateRange,
@@ -50,7 +50,7 @@ import { formatJalaliDate } from '../_lib/jalali-date';
  */
 export function ApprovalsContent() {
   const { t } = useTranslation('dms');
-  const { actor, ready } = useDmsActor();
+  const { actor, ready } = useDmsActor('VesselSupervisor');
   const [projectId, setProjectId] = useState('');
   const [openReportId, setOpenReportId] = useState<string | null>(null);
   const [range, setRange] = useState<ReportDateRangeValue>({ from: '', to: '' });
@@ -116,7 +116,7 @@ export function ApprovalsContent() {
             <p className="text-sm text-muted-foreground">
               {t('supervisorOnlyBody', {
                 defaultValue:
-                  'Only the vessel supervisor reviews a submitted day. Change role to continue.',
+                  'Only the vessel supervisor reviews a submitted day. Your account does not hold this role.',
               })}
             </p>
           </CardContent>

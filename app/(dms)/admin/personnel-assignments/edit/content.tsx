@@ -29,8 +29,8 @@ import {
   listProjects,
   listShifts,
   updatePersonnelAssignment,
-} from '@/lib/dms/mock-store';
-import { DMS_PROJECT_ROLES } from '@/lib/dms/types';
+} from '@/lib/dms/store';
+import { ProjectRoleSelect } from '../../../_components/project-role-select';
 import { useDmsActor } from '../../../_lib/use-dms-actor';
 
 /**
@@ -52,7 +52,7 @@ export function EditPersonnelAssignmentContent() {
   const { t } = useTranslation('dms');
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { actor, ready } = useDmsActor();
+  const { actor, ready } = useDmsActor('ProjectControl');
   const searchParams = useSearchParams();
   const id = searchParams.get('id');
 
@@ -118,7 +118,7 @@ export function EditPersonnelAssignmentContent() {
           // `undefined` here means "no end date", which is what open means.
           endDate: endDate === '' ? undefined : endDate,
           shiftId: shiftId === '' ? undefined : shiftId,
-          roleId: roleId === '' ? undefined : (roleId as (typeof DMS_PROJECT_ROLES)[number]),
+          roleId: roleId === '' ? undefined : roleId,
         },
         actor,
       });
@@ -154,7 +154,7 @@ export function EditPersonnelAssignmentContent() {
             <p className="text-sm text-muted-foreground">
               {t('projectControlOnlyBody', {
                 defaultValue:
-                  'Head office defines projects, vessels and personnel. Change role to continue.',
+                  'Head office defines projects, vessels and personnel. Your account does not hold this role.',
               })}
             </p>
           </CardContent>
@@ -306,20 +306,7 @@ export function EditPersonnelAssignmentContent() {
                     <Label htmlFor="pa-edit-role">
                       {t('role', { defaultValue: 'Role' })}
                     </Label>
-                    <Select value={roleId} onValueChange={setRoleId}>
-                      <SelectTrigger id="pa-edit-role" className="w-full">
-                        <SelectValue
-                          placeholder={t('selectRole', { defaultValue: 'Select a role…' })}
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {DMS_PROJECT_ROLES.map((r) => (
-                          <SelectItem key={r} value={r}>
-                            {r}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <ProjectRoleSelect id="pa-edit-role" value={roleId} onChange={setRoleId} />
                   </div>
                 </div>
 

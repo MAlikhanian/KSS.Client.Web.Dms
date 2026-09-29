@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
-import { transitionReport } from '@/lib/dms/mock-store';
+import { transitionReport } from '@/lib/dms/store';
 import type { DmsActor, DmsDailyOperationReport } from '@/lib/dms/types';
 import { canTransition } from '@/lib/dms/workflow';
 

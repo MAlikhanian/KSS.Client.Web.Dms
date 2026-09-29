@@ -26,29 +26,16 @@
  * `/forbidden` is excluded — it is a rewrite target, not a destination. Vessel
  * create and edit are reached from the vessels list, not from the menu.
  *
- * ─── DESIGN NOTE FOR THE BACKEND PHASE — NOT A CONTROL ──────────────────────
- * NOTHING BELOW IS ENFORCED. It is a condition for a future decision, written
- * here so the reasoning survives the person who made it.
- *
- * The entries are currently rendered UNFILTERED: every role sees all of them, and
- * `middleware.ts` refuses the ones it should. That is deliberate, and the
- * reason is not "menu gating is cosmetic" — it is that the `dms.role` cookie is
- * SELF-SERVICE. The viewer holds the role picker and can change role with a
- * click, so filtering would spend a permanent cost on every page load to hide
- * entries from someone who can reveal them at will. That is theatre: it
- * protects nothing and charges continuously.
- *
- * WHEN THAT STOPS BEING TRUE — when DMS roles become real Auth roles rather
- * than a cookie the viewer sets — the menu SHOULD gate, and filtering becomes
- * correct rather than theatre.
- *
- * The data for it already exists and is type-checked: `dmsRoles` below is
- * typed against the same `DmsRole` union the guard uses. Turning gating on is
- * adding a filter, not adding data. Note the cost that will still apply:
- * reading the role during render has no `document` on the server, so a filter
- * needs a mounted gate and the entries will appear after hydration.
+ * ─── THE MENU IS GATED BY THE AUTH SESSION ─────────────────────────────────
+ * DMS roles are real Auth roles, so the menu filters: `dmsMenuItems` (below)
+ * gives every entry the Auth role codes for its `dmsRoles` plus the Dms.Read
+ * permission, and the sidebar's estate filter matches them against the
+ * signed-in session — the same claims middleware.ts decides routes from. No
+ * session or no DMS access shows no entries at all. Hiding an entry is a
+ * courtesy; the route guard is the control.
  */
 
+import { authRoleCodesFor, DMS_READ_PERMISSION } from './access';
 import type { DmsRole } from './types';
 
 /**
@@ -173,12 +160,11 @@ export interface DmsMenuEntry {
    */
   titleKey: string;
   /**
-   * Which DMS roles the entry is FOR. Empty means everyone.
+   * Which DMS roles the entry is FOR. Empty means every DMS role.
    *
-   * NOT currently applied as a runtime filter — see config/menu.config.tsx for
-   * why the estate's `filterMenuByRole` cannot carry these. Declared anyway,
-   * because the day a DMS-aware filter exists this is the data it needs, and
-   * because it documents the mapping against §1 in typed form.
+   * Applied at runtime: config/menu.config.tsx turns these into the Auth role
+   * codes (authRoleCodesFor in ./access) that the sidebar's estate filter
+   * matches against the signed-in session.
    */
   dmsRoles: readonly DmsRole[];
 }
@@ -261,8 +247,8 @@ export const DMS_MENU_ENTRIES: readonly DmsMenuEntry[] = [
     dmsRoles: ['ProjectControl'],
   },
   {
-    // «نقش‌های پروژه (جدول یا لیست مرجع)» — READ-ONLY. The seven roles are
-    // model, not store: DmsPersonnelAssignment.roleId is typed against them.
+    // «نقش‌های پروژه (جدول یا لیست مرجع)» — an editable table: roles are added,
+    // renamed, reordered and deactivated here (never deleted).
     path: '/dms/admin/project-roles',
     title: 'Project Roles',
     titleKey: 'menuProjectRoles',
@@ -285,3 +271,23 @@ export const DMS_MENU_ENTRIES: readonly DmsMenuEntry[] = [
     dmsRoles: ['ProjectControl'],
   },
 ] as const;
+
+/**
+ * The DMS menu items as the sidebar receives them. Each carries the estate's own
+ * `roles` + `permissions` fields, so the sidebar's filterMenuByRole matches them
+ * against the signed-in session — the same claims the route guard reads — and
+ * hides every entry when there is no session or no DMS access (fail closed).
+ *
+ * Pure and here, not inline in config/menu.config.tsx, so the menu test runs
+ * THIS function through the estate's real filter rather than a copy of it.
+ */
+export function dmsMenuItems(
+  translate: (entry: DmsMenuEntry) => string,
+): { title: string; path: string; roles: string[]; permissions: string[] }[] {
+  return DMS_MENU_ENTRIES.map((entry) => ({
+    title: translate(entry),
+    path: entry.path,
+    roles: authRoleCodesFor(entry.dmsRoles),
+    permissions: [DMS_READ_PERMISSION],
+  }));
+}

@@ -28,8 +28,8 @@ import {
   listPersonnel,
   listProjects,
   listShifts,
-} from '@/lib/dms/mock-store';
-import { DMS_PROJECT_ROLES } from '@/lib/dms/types';
+} from '@/lib/dms/store';
+import { ProjectRoleSelect } from '../../../_components/project-role-select';
 import { useDmsActor } from '../../../_lib/use-dms-actor';
 
 /**
@@ -51,7 +51,7 @@ export function AssignPersonnelContent() {
   const { t } = useTranslation('dms');
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { actor, ready } = useDmsActor();
+  const { actor, ready } = useDmsActor('ProjectControl');
 
   const [projectId, setProjectId] = useState('');
   const [personnelId, setPersonnelId] = useState('');
@@ -80,7 +80,7 @@ export function AssignPersonnelContent() {
         // rather than an open assignment.
         ...(endDate !== '' ? { endDate } : {}),
         ...(shiftId !== '' ? { shiftId } : {}),
-        ...(roleId !== '' ? { roleId: roleId as (typeof DMS_PROJECT_ROLES)[number] } : {}),
+        ...(roleId !== '' ? { roleId } : {}),
         actor,
       });
     },
@@ -116,7 +116,7 @@ export function AssignPersonnelContent() {
             <p className="text-sm text-muted-foreground">
               {t('projectControlOnlyBody', {
                 defaultValue:
-                  'Head office defines projects, vessels and personnel. Change role to continue.',
+                  'Head office defines projects, vessels and personnel. Your account does not hold this role.',
               })}
             </p>
           </CardContent>
@@ -230,20 +230,7 @@ export function AssignPersonnelContent() {
                 <Label htmlFor="pa-new-role">
                   {t('role', { defaultValue: 'Role' })}
                 </Label>
-                <Select value={roleId} onValueChange={setRoleId}>
-                  <SelectTrigger id="pa-new-role" className="w-full">
-                    <SelectValue
-                      placeholder={t('selectRole', { defaultValue: 'Select a role…' })}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DMS_PROJECT_ROLES.map((r) => (
-                      <SelectItem key={r} value={r}>
-                        {r}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ProjectRoleSelect id="pa-new-role" value={roleId} onChange={setRoleId} />
               </div>
             </div>
 

@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/table';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
-import { listProjects } from '@/lib/dms/mock-store';
+import { listProjects } from '@/lib/dms/store';
 import { useDmsActor } from '../../_lib/use-dms-actor';
 
 /**
@@ -34,7 +34,7 @@ import { useDmsActor } from '../../_lib/use-dms-actor';
  */
 export function ProjectsContent() {
   const { t } = useTranslation('dms');
-  const { actor, ready } = useDmsActor();
+  const { actor, ready } = useDmsActor('ProjectControl');
   const [query, setQuery] = useState('');
 
   const projectsQuery = useQuery({
@@ -67,7 +67,7 @@ export function ProjectsContent() {
             <p className="text-sm text-muted-foreground">
               {t('projectControlOnlyBody', {
                 defaultValue:
-                  'Head office defines projects, vessels and personnel. Change role to continue.',
+                  'Head office defines projects, vessels and personnel. Your account does not hold this role.',
               })}
             </p>
           </CardContent>

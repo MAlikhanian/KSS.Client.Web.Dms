@@ -15,11 +15,10 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from '@/hooks/useTranslation';
-import { listStoppageTypes } from '@/lib/dms/mock-store';
+import { listStoppageTypes } from '@/lib/dms/store';
 import { ALL_RESPONSIBLE_PARTIES } from '@/lib/dms/types';
 import type { DmsStoppage, ResponsibleParty } from '@/lib/dms/types';
 import { parseOptionalNumber, toEnglishDigits } from '../_lib/digits';
-import { SampleDataPageLine } from './sample-data';
 
 export type StoppageDraft = Omit<DmsStoppage, 'id' | 'reportId'>;
 
@@ -108,7 +107,6 @@ export function StoppageForm({
 
   return (
     <div className="rounded-lg border border-border p-4 space-y-4">
-      <SampleDataPageLine />
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         <div className="space-y-1.5">
           <label className="text-sm font-medium block" htmlFor="stp-type">
@@ -124,7 +122,12 @@ export function StoppageForm({
               />
             </SelectTrigger>
             <SelectContent>
-              {typesQuery.data?.map((row) => (
+              {/* Active types only; the stoppage's own type stays listed even if
+                  it has since been deactivated, so editing an old row never
+                  blanks it. */}
+              {typesQuery.data
+                ?.filter((row) => row.isActive !== false || row.code === stoppageCode)
+                .map((row) => (
                 <SelectItem key={row.id} value={row.code}>
                   {row.code} — {row.name}
                 </SelectItem>

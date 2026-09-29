@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
-import { transitionReport } from '@/lib/dms/mock-store';
+import { transitionReport } from '@/lib/dms/store';
 import type { DmsActor, DmsDailyOperationReport } from '@/lib/dms/types';
 import { canTransition, type ReportAction } from '@/lib/dms/workflow';
 import { formatJalaliDate } from '../../_lib/jalali-date';

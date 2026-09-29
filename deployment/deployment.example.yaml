@@ -2,33 +2,17 @@
 #  KSS Client Web — dms domain app (multi-zone)
 # =============================================================================
 #  Modelled on CustomerRisk/deployment/deployment.yaml — the nearest structural
-#  peer, not CashAdvance. CustomerRisk is frontend-and-mock-only and declares
-#  exactly one backend (AUTH) plus tenants; DMS declares the same two and
-#  nothing else. Every identifier below was derived from domains.json
+#  peer, not CashAdvance. Like CustomerRisk, DMS declares Auth, its own
+#  service and tenants, and nothing else. Every identifier below was derived from domains.json
 #  (folder "Dms", slug "dms", zone false) rather than adapted from another
 #  zone's file, because the known failure in this estate is a manifest that is
 #  correct in most fields.
 #
 #  ---------------------------------------------------------------------------
-#  ⚠⚠ THIS MANIFEST IS NOT DEPLOYABLE YET. ONE PRECONDITION IS UNMET.
-#
-#      app/api/health/route.ts DOES NOT EXIST IN THIS REPO.
-#
-#  All 13 deployed zones ship one; the _Kit template ships none, so each zone
-#  authored its own (all 12 zone copies differ — each embeds its own name).
-#  DMS and Template are the only two without it. The three probes below point
-#  at /dms/api/health, which today returns 404: startupProbe would fail 36
-#  times at 5s and the container would be killed, then CrashLoopBackOff. The
-#  pod would never become Ready.
-#
-#  That failure is loud, but it reads as "the image is broken" rather than
-#  "the manifest asked for a route nobody wrote" — so it is stated here, at
-#  the field that depends on it, and not only in a task list.
-#
-#  Verified, so nobody re-derives it: middleware.ts does NOT block the probe.
-#  Its matcher excludes only _next/static, _next/image, api/auth and favicon,
-#  but ruleFor('/api/health') matches none of the four ROUTE_ROLES prefixes,
-#  so it returns NextResponse.next(). The 404 is an absent route, nothing else.
+#  ✅ The health route exists (app/api/health/route.ts) and the three probes
+#  below hit it. middleware.ts excludes api/health from its session check, so
+#  the probe answers without a session — it must, or a healthy pod would be
+#  redirected to sign-in and restarted.
 #
 #  ---------------------------------------------------------------------------
 #  1. NO INGRESS — AND NOT FOR THE REASON THE OTHER ZONES GIVE.
@@ -39,16 +23,11 @@
 #  the estate that HAS a middleware.ts. Copying it in would have shipped a
 #  false comment into the one file where it does not hold.
 #
-#  The true reason is stronger. middleware.ts gates four route prefixes by
-#  DMS role, and its own header states the size of that honestly:
-#
-#      "THIS GATES THE THREE-ROLE DEMO DETERMINISTICALLY.
-#       IT AUTHENTICATES NOTHING. The role is a cookie the browser owns and
-#       anyone can set."
-#
-#  So an Ingress here would be worse than on a zone with no middleware at all:
-#  the guard would make direct exposure LOOK controlled while the visitor holds
-#  the only input it reads. The Shell stays the single public entrypoint.
+#  middleware.ts now VERIFIES the Auth session (the NextAuth JWT, with
+#  NEXTAUTH_SECRET) and the caller's DMS role on every request, and fails
+#  closed. That still does not make an Ingress here a good idea: the Shell is
+#  the estate's single public entrypoint, and a second one is a second thing to
+#  keep in step with it.
 #
 #  NO INGRESS HOST IS SET ANYWHERE IN THIS FILE, and that is still correct.
 #
@@ -75,31 +54,16 @@
 #  with a note carrying the same reasoning, and dms is a key in the Shell's
 #  ConfigMap zones value (13 keys).
 #
-#  ⚠ UNCHANGED BY COMPOSITION: frontend and mock data only, no backend service,
-#  no database, tier: internal, every figure on the 16 screens invented. Never
-#  sellable while the code is a mock.
+#  2026-09-29: WIRED. The data comes from the DMS service
+#  (KSS.Service.SEBA_ERP_Dms); the zone holds none. See section 3.
 #
 #  ---------------------------------------------------------------------------
-#  3. ⚠ THIS APP'S DATA IS BROWSER localStorage (lib/dms/mock-store.ts).
+#  3. DATA LIVES IN THE DMS SERVICE, NOT IN THE BROWSER.
 #
-#  There is no KSS.Service.Dms. Ten domain keys (dms:projects, dms:subprojects,
-#  dms:vessels, dms:vessel-assignments, dms:personnel,
-#  dms:personnel-assignments, dms:shifts, dms:daily-reports, dms:cycles,
-#  dms:stoppages) plus dms:seed-version live only in each user's browser, and
-#  survive only while this app is served from the SAME ORIGIN. Serving it from
-#  a different hostname makes every user's data invisible — a second reason the
-#  ingress question is not cosmetic. ⚠ SEED_VERSION: DO NOT COPY CustomerRisk.
-#
-#  CustomerRisk carries "SEED_VERSION must stay 2" and that is NOT the rule
-#  here. DMS version-gates ALL ten keys with no per-key emptiness guard, and
-#  the CRUD screens made every one of them USER-WRITABLE - so a bump destroys
-#  entered data, and mock-store.ts advertises the bump as the way to reinstall
-#  samples. Sydney ruling 2026-09-08: emptiness-guard every key, so a bump
-#  fills only what is absent.
-#
-#  ⏳ EXPIRY: DELETE THIS SEED_VERSION PARAGRAPH once that guard is in. It is
-#  a note about a defect being fixed, not a standing constraint, and a stale
-#  constraint in a permanent file is read as a live one forever.
+#  Every data call goes through this zone's own proxy (app/api/dms/[...path]
+#  and services/dms-api.ts) to DMS_API_BASE_URL, as the signed-in user: the
+#  session token and the active company (x-company-id) travel with it, and the
+#  service checks role, permission and company on every request.
 #
 #  ---------------------------------------------------------------------------
 #  THREE THINGS ARE NOT IN THIS FILE, in order of how quietly each one fails:
@@ -185,29 +149,15 @@ spec:
         # ── Auth ────────────────────────────────────────────────────────────
         # ⚠ MUST BE BYTE-IDENTICAL TO THE SHELL'S.
         #
-        # The other zones justify this with "this app decrypts the cookie the
-        # Shell issued". THAT IS NOT TRUE OF DMS TODAY, and the claim is not
-        # repeated here: DMS has ZERO server-side session reads. Measured —
-        # no getServerSession, no getToken anywhere in its own code (only a
-        # type import and a doc comment). CashAdvance has 36 such files.
-        # next-auth appears here only as CLIENT useSession, which in production
-        # is served by the SHELL's /api/auth/*, never by this app. This repo
-        # ships app/api/auth/[...nextauth]/auth-options.ts with NO route.ts —
-        # config without a handler, exactly as all 13 other zones do.
-        #
-        # It is set anyway, non-optional, for two reasons that are about the
-        # failure direction rather than today's code:
-        #   · absent + non-optional is CreateContainerConfigError, which is
-        #     loud NOW. The first server component that reads a session would
-        #     otherwise fail at request time, on a pod already reporting Ready.
-        #   · 13 of 13 zones set it and none marks it optional. A zone that
-        #     uniquely omits it is a divergence decision, and this is not the
-        #     file in which to take one.
+        # LOAD-BEARING IN THIS ZONE. middleware.ts decodes the session with it on
+        # EVERY request (getToken) and the DMS proxy reads the session with it
+        # (getServerSession). A missing or different value decodes to no session,
+        # so EVERY request is refused and sent to sign-in — a sign-in loop, not a
+        # red pod. It must equal the Shell's exactly.
         #
         # An EMPTY value would be worse than absent: valid base64, so the key
-        # exists, the pod STARTS, and next-auth reads "" (it uses ??, so "" is
-        # not defaulted). A checked-in key would also be re-blanked by every
-        # `kubectl apply`.
+        # exists, the pod STARTS, and every request is refused. A checked-in key
+        # would also be re-blanked by every `kubectl apply`.
         - name: NEXTAUTH_SECRET
           valueFrom:
             secretKeyRef:
@@ -251,16 +201,21 @@ spec:
               key: tenants
 
         # ── Backend services ────────────────────────────────────────────────
-        # ONE, and only one. services/auth-api.ts:9 reads AUTH_API_BASE_URL and
-        # THROWS if it is unset. DMS calls no other service: there is no
-        # KSS.Service.Dms, and no PERSON / PROJECT / FILE_ORCHESTRATOR /
-        # CASHADVANCE reference exists anywhere in this repo. Adding any of them
-        # here would be the copied-manifest failure in its usual form.
+        # TWO: Auth (services/auth-api.ts reads AUTH_API_BASE_URL and throws if it
+        # is unset) and the DMS service (below). No other service is called.
         - name: AUTH_API_BASE_URL
           valueFrom:
             configMapKeyRef:
               name: kss-client-web-dms-config
               key: auth-api-base-url
+        # The DMS service, read by services/dms-api.ts (the zone's proxy).
+        # Deliberately NOT `optional`: without it every data route answers 503,
+        # so a missing key should stop the pod from starting instead.
+        - name: DMS_API_BASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: kss-client-web-dms-config
+              key: dms-api-base-url
 
         # ── Object storage ──────────────────────────────────────────────────
         # Referenced by shared lib code copied in from _Kit (lib/s3-client.ts,
@@ -287,7 +242,7 @@ spec:
           valueFrom:
             secretKeyRef: { name: kss-client-web-dms-secrets, key: storage-cdn-url, optional: true }
 
-        # 7 pages, no BFF routes, no uploads — the standard zone profile that
+        # One forwarding route (app/api/dms/[...path]), no uploads — the standard zone profile that
         # 12 of 13 zones carry, NOT CashAdvance's larger one (which is stated
         # there as being for 49 pages and 34 BFF routes).
         resources:
@@ -359,6 +314,10 @@ metadata:
   namespace: kss-client-web-dms
 data:
   auth-api-base-url: "https://auth.api.sebaoffice.ir"
+  # The DMS service in its own namespace: the FULL cluster name, because the bare
+  # service name resolves only inside kss-dms-service. No port: the Service
+  # listens on 80 and forwards to the pod's 8000.
+  dms-api-base-url: "http://kss-dms-service-service.kss-dms-service.svc.cluster.local"
   tenants: '{"erp.seba.ir":{"name":"SEBA","logo":"/media/app/default-logo.svg","logoDark":"/media/app/default-logo-dark.svg","logoMini":"/media/app/mini-logo.svg","favicon":"/favicon.ico","banner":"/media/images/2600x1600/1.png","bannerDark":"/media/images/2600x1600/1-dark.png","companyId":"019f317a-12ba-764f-b19b-e064e36b4be8","footer":{"brand":{"label":"SEBA","href":"https://seba.ir"},"links":[{"en":"Docs","fa":"مستندات","href":""},{"en":"Purchase","fa":"خرید","href":""},{"en":"FAQ","fa":"سوالات متداول","href":"https://www.seba.ir/%D8%AA%D9%85%D8%A7%D8%B3-%D8%A8%D8%A7-%DA%A9%D8%A7%D9%86%D9%88%D9%86"},{"en":"Support","fa":"پشتیبانی","href":"https://www.seba.ir/%D8%AA%D9%85%D8%A7%D8%B3-%D8%A8%D8%A7-%DA%A9%D8%A7%D9%86%D9%88%D9%86"},{"en":"License","fa":"مجوز","href":""}]}},"members.sebaoffice.ir":{"name":"SEBA","logo":"/media/app/default-logo.svg","logoDark":"/media/app/default-logo-dark.svg","logoMini":"/media/app/mini-logo.svg","favicon":"/favicon.ico","banner":"/media/images/2600x1600/1.png","bannerDark":"/media/images/2600x1600/1-dark.png","companyId":"019f317a-12ba-764f-b19b-e064e36b4be8","footer":{"brand":{"label":"SEBA","href":"https://seba.ir"},"links":[{"en":"Docs","fa":"مستندات","href":""},{"en":"Purchase","fa":"خرید","href":""},{"en":"FAQ","fa":"سوالات متداول","href":"https://www.seba.ir/%D8%AA%D9%85%D8%A7%D8%B3-%D8%A8%D8%A7-%DA%A9%D8%A7%D9%86%D9%88%D9%86"},{"en":"Support","fa":"پشتیبانی","href":"https://www.seba.ir/%D8%AA%D9%85%D8%A7%D8%B3-%D8%A8%D8%A7-%DA%A9%D8%A7%D9%86%D9%88%D9%86"},{"en":"License","fa":"مجوز","href":""}]}},"nerp.sajoffice.ir":{"name":"SAJ","logo":"/media/tenants/saj/logo.png","logoDark":"/media/tenants/saj/logo.png","logoMini":"/media/tenants/saj/logo.png","favicon":"/media/tenants/saj/favicon.png","banner":"/media/tenants/saj/banner.jpg","bannerDark":"/media/tenants/saj/banner.jpg","companyId":"019f0e6c-9fbc-78cf-9202-fa932a9878f7","footer":{"brand":{"label":"SAJ","href":""},"links":[{"en":"Docs","fa":"مستندات","href":""},{"en":"Purchase","fa":"خرید","href":""},{"en":"FAQ","fa":"سوالات متداول","href":""},{"en":"Support","fa":"پشتیبانی","href":""},{"en":"License","fa":"مجوز","href":""}]}},"erp.mpfoffice.ir":{"name":"MPF","logo":"/media/tenants/mpf/logo.svg","logoDark":"/media/tenants/mpf/logo-dark.svg","logoMini":"/media/tenants/mpf/logo-mini.svg","favicon":"/media/tenants/mpf/favicon.svg","banner":"/media/tenants/mpf/banner.svg","bannerDark":"/media/tenants/mpf/banner-dark.svg","companyId":"019f7a3e-1d43-7bcb-a7f3-eb97572e2e02","footer":{"brand":{"label":"MPF","href":""},"links":[{"en":"Docs","fa":"مستندات","href":""},{"en":"Purchase","fa":"خرید","href":""},{"en":"FAQ","fa":"سوالات متداول","href":""},{"en":"Support","fa":"پشتیبانی","href":""},{"en":"License","fa":"مجوز","href":""}]}},"spmoffice.ir":{"name":"SPM","logo":"/media/tenants/spm/logo.svg","logoDark":"/media/tenants/spm/logo-dark.svg","logoMini":"/media/tenants/spm/logo-mini.svg","favicon":"/media/tenants/spm/favicon.svg","banner":"/media/tenants/spm/banner.svg","bannerDark":"/media/tenants/spm/banner-dark.svg","companyId":"01a04744-68ae-7aef-b9d0-b5fb31d7a80c","footer":{"brand":{"label":"SPM","href":""},"links":[{"en":"Docs","fa":"مستندات","href":""},{"en":"Purchase","fa":"خرید","href":""},{"en":"FAQ","fa":"سوالات متداول","href":""},{"en":"Support","fa":"پشتیبانی","href":""},{"en":"License","fa":"مجوز","href":""}]}},"mkoffice.ir":{"name":"MK","footer":{"brand":{"label":"مشیران کاریز","href":"https://moshirankariz.com"},"links":[{"en":"Docs","fa":"مستندات","href":""},{"en":"Purchase","fa":"خرید","href":""},{"en":"FAQ","fa":"سوالات متداول","href":""},{"en":"Support","fa":"پشتیبانی","href":""},{"en":"License","fa":"مجوز","href":""}]},"logo":"/media/tenants/mk/logo.png","logoDark":"/media/tenants/mk/logo.png","logoMini":"/media/tenants/mk/logo.png","favicon":"/media/tenants/mk/favicon.ico","banner":"/media/tenants/mk/banner.jpg","bannerDark":"/media/tenants/mk/banner.jpg","companyId":"01a07fb0-e2e7-7822-b14b-3a70278009ef"}}'
 ---
 # ⚠ `nextauth-secret` IS NOT IN THIS FILE, AND MUST NOT BE ADDED TO IT.

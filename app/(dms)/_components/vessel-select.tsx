@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useTranslation } from '@/hooks/useTranslation';
-import { listVessels } from '@/lib/dms/mock-store';
+import { listVessels } from '@/lib/dms/store';
 
 /**
  * A pick from the DEFINED vessels. Value is the vessel id, or '' when none is

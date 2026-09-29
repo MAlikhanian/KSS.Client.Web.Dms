@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
-import { updateVessel } from '@/lib/dms/mock-store';
+import { updateVessel } from '@/lib/dms/store';
 import type { DmsActor, DmsVessel, VesselPatch } from '@/lib/dms/types';
 import {
   parseOptionalNumber,

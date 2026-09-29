@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
-import { getProjectVessel, updateReport } from '@/lib/dms/mock-store';
+import { getProjectVessel, updateReport } from '@/lib/dms/store';
 import type { DmsActor, DmsDailyOperationReport } from '@/lib/dms/types';
 import { STATUS_BADGE } from '../../_lib/report-status';
 import { formatJalaliDate } from '../../_lib/jalali-date';

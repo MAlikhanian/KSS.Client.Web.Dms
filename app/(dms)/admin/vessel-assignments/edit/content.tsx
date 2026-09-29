@@ -27,7 +27,7 @@ import {
   correctVesselAssignment,
   getVesselAssignment,
   listVessels,
-} from '@/lib/dms/mock-store';
+} from '@/lib/dms/store';
 import { useDmsActor } from '../../../_lib/use-dms-actor';
 
 /**
@@ -48,7 +48,7 @@ import { useDmsActor } from '../../../_lib/use-dms-actor';
 export function EditVesselAssignmentContent() {
   const { t } = useTranslation('dms');
   const queryClient = useQueryClient();
-  const { actor, ready } = useDmsActor();
+  const { actor, ready } = useDmsActor('ProjectControl');
   const searchParams = useSearchParams();
   const projectId = searchParams.get('projectId');
 

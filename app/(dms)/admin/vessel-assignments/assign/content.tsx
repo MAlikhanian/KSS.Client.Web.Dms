@@ -26,7 +26,7 @@ import {
   assignVesselToProject,
   listProjects,
   listVessels,
-} from '@/lib/dms/mock-store';
+} from '@/lib/dms/store';
 import { useDmsActor } from '../../../_lib/use-dms-actor';
 import { todayIsoInTehran } from '../../../_lib/jalali-date';
 
@@ -53,7 +53,7 @@ export function AssignVesselContent() {
   const { t } = useTranslation('dms');
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { actor, ready } = useDmsActor();
+  const { actor, ready } = useDmsActor('ProjectControl');
   const searchParams = useSearchParams();
 
   const [projectId, setProjectId] = useState('');

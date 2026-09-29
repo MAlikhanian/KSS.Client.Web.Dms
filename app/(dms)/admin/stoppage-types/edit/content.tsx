@@ -17,21 +17,24 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError, type DmsError } from '@/lib/dms/errors';
-import { getStoppageType, updateStoppageType } from '@/lib/dms/mock-store';
+import { getStoppageType, updateStoppageType } from '@/lib/dms/store';
 import { useDmsActor } from '../../../_lib/use-dms-actor';
+import { StoppageCategorySelect } from '../../../_components/stoppage-category-select';
 
 /** Edit a downtime type. Same four columns; the code stays unique. */
 export function EditStoppageTypeContent() {
   const { t } = useTranslation('dms');
   const queryClient = useQueryClient();
-  const { actor, ready } = useDmsActor();
+  const { actor, ready } = useDmsActor('ProjectControl');
   const searchParams = useSearchParams();
   const id = searchParams.get('id');
 
   const [code, setCode] = useState('');
   const [category, setCategory] = useState('');
   const [name, setName] = useState('');
-  const [isPlanned, setIsPlanned] = useState(false);
+  // Follows the category, as the service requires: planned exactly when the
+  // category is Planned. Shown, never set by hand.
+  const isPlanned = category === 'Planned';
 
   const typeQuery = useQuery({
     queryKey: ['dms', 'stoppage-type', id],
@@ -46,7 +49,6 @@ export function EditStoppageTypeContent() {
     setCode(row.code);
     setCategory(row.category);
     setName(row.name);
-    setIsPlanned(row.isPlanned);
   }, [typeQuery.data]);
 
   const saveMutation = useMutation({
@@ -213,10 +215,10 @@ export function EditStoppageTypeContent() {
                       <label className="text-sm font-medium block" htmlFor="dte-category">
                         {t('downtimeCategory', { defaultValue: 'Category' })}
                       </label>
-                      <Input
+                      <StoppageCategorySelect
                         id="dte-category"
                         value={category}
-                        onChange={(e) => setCategory(e.target.value)}
+                        onChange={setCategory}
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -235,7 +237,7 @@ export function EditStoppageTypeContent() {
                     <Checkbox
                       id="dte-planned"
                       checked={isPlanned}
-                      onCheckedChange={(checked) => setIsPlanned(checked === true)}
+                      disabled
                     />
                     <label className="text-sm font-medium" htmlFor="dte-planned">
                       {t('downtimeIsPlannedLabel', {
@@ -246,7 +248,7 @@ export function EditStoppageTypeContent() {
                   <p className="text-xs text-muted-foreground">
                     {t('downtimeIsPlannedNote', {
                       defaultValue:
-                        'A DEFAULT for stoppages logged with this type. The logged stoppage keeps its own value, and that is what T_PD is computed from.',
+                        'Follows the category: a type in the Planned category is planned downtime. Stoppages logged with this type take this value.',
                     })}
                   </p>
 

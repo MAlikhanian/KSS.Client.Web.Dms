@@ -1,10 +1,9 @@
 /**
  * The one error type every DMS data function rejects with.
  *
- * Each code carries the HTTP status the eventual API would return, so when
- * mock-store.ts is swapped for real calls the catch blocks already written in
- * the UI keep working: the store maps a response status back to the same code
- * and throws the same class. Nothing at a call site changes.
+ * Each code carries the HTTP status the DMS service answers with. lib/dms/http.ts
+ * maps a response status back to the same code (codeForStatus) and throws this
+ * class, so every catch block in the UI handles the service's refusals.
  *
  * The status is DERIVED from the code, never passed in, so the two cannot
  * drift apart across the dozens of throw sites.

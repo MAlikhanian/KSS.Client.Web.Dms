@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
-import { createShift } from '@/lib/dms/mock-store';
+import { createShift } from '@/lib/dms/store';
 import { useDmsActor } from '../../../_lib/use-dms-actor';
 
 /**
@@ -31,7 +31,7 @@ export function CreateShiftContent() {
   const { t } = useTranslation('dms');
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { actor, ready } = useDmsActor();
+  const { actor, ready } = useDmsActor('ProjectControl');
   const [name, setName] = useState('');
   const [timeRangeText, setTimeRangeText] = useState('');
 
@@ -70,7 +70,7 @@ export function CreateShiftContent() {
             <p className="text-sm text-muted-foreground">
               {t('projectControlOnlyBody', {
                 defaultValue:
-                  'Head office defines projects, vessels and personnel. Change role to continue.',
+                  'Head office defines projects, vessels and personnel. Your account does not hold this role.',
               })}
             </p>
           </CardContent>

@@ -25,7 +25,7 @@ import {
   listProjects,
   listVessels,
   listVesselAssignments,
-} from '@/lib/dms/mock-store';
+} from '@/lib/dms/store';
 import { useDmsActor } from '../../_lib/use-dms-actor';
 import { formatJalaliDate } from '../../_lib/jalali-date';
 
@@ -44,7 +44,7 @@ import { formatJalaliDate } from '../../_lib/jalali-date';
  */
 export function VesselAssignmentsContent() {
   const { t } = useTranslation('dms');
-  const { actor, ready } = useDmsActor();
+  const { actor, ready } = useDmsActor('ProjectControl');
 
   // Three reads joined for presentation. The store returns rows; the join is
   // this screen's business, not the API's.
@@ -79,7 +79,7 @@ export function VesselAssignmentsContent() {
             <p className="text-sm text-muted-foreground">
               {t('projectControlOnlyBody', {
                 defaultValue:
-                  'Head office defines projects, vessels and personnel. Change role to continue.',
+                  'Head office defines projects, vessels and personnel. Your account does not hold this role.',
               })}
             </p>
           </CardContent>
