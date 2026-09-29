@@ -26,8 +26,8 @@ import { isDmsError } from '@/lib/dms/errors';
 import { createProjectRole, updateProjectRole } from '@/lib/dms/store';
 import type { DmsActor, DmsProjectRoleRow } from '@/lib/dms/types';
 import { useProjectRoles } from '../../_components/project-role-select';
-import { toEnglishDigits } from '../../_lib/digits';
 import { useDmsActor } from '../../_lib/use-dms-actor';
+import { checkDraft, draftFrom, nextEditing, type EditingState, type RoleDraft } from './role-edit';
 
 /**
  * FRD «نقش‌های پروژه (جدول یا لیست مرجع)» — the roles a person can hold on a
@@ -42,11 +42,16 @@ import { useDmsActor } from '../../_lib/use-dms-actor';
  * renaming it would silently detach them. The name, order and active flag can
  * change. A role no longer used is DEACTIVATED, never deleted — it stays on the
  * assignments that hold it and is no longer offered for new ones.
+ *
+ * Rows are READ-ONLY until «ویرایش» is pressed on one of them, and only one row
+ * is open at a time: rows that were always editable, with a greyed Save, did
+ * not read as editable at all.
  */
 export function ProjectRolesContent() {
   const { t } = useTranslation('dms');
   const { actor, ready } = useDmsActor('ProjectControl');
   const rolesQuery = useProjectRoles();
+  const [editing, setEditing] = useState<EditingState>(null);
 
   if (!ready) {
     return (
@@ -127,7 +132,15 @@ export function ProjectRolesContent() {
                   </TableHeader>
                   <TableBody>
                     {rows.map((row) => (
-                      <RoleRow key={row.id} row={row} actor={actor} />
+                      <RoleRow
+                        key={row.id}
+                        row={row}
+                        actor={actor}
+                        editing={editing === row.id}
+                        otherRowOpen={editing !== null && editing !== row.id}
+                        onEdit={() => setEditing((cur) => nextEditing(cur, { type: 'edit', id: row.id }))}
+                        onDone={() => setEditing((cur) => nextEditing(cur, { type: 'done' }))}
+                      />
                     ))}
                   </TableBody>
                 </Table>
@@ -142,24 +155,36 @@ export function ProjectRolesContent() {
   );
 }
 
-/** One role, editable in place: name, order and active. The code is shown, never edited. */
-function RoleRow({ row, actor }: { row: DmsProjectRoleRow; actor: DmsActor }) {
+/**
+ * One role. Read-only until «ویرایش»; then name, order and active are editable
+ * with «ذخیره» and «انصراف». The code is shown, never edited.
+ */
+function RoleRow({
+  row,
+  actor,
+  editing,
+  otherRowOpen,
+  onEdit,
+  onDone,
+}: {
+  row: DmsProjectRoleRow;
+  actor: DmsActor;
+  editing: boolean;
+  otherRowOpen: boolean;
+  onEdit: () => void;
+  onDone: () => void;
+}) {
   const { t } = useTranslation('dms');
   const queryClient = useQueryClient();
-  const [name, setName] = useState(row.name);
-  const [sortOrder, setSortOrder] = useState(String(row.sortOrder));
-  const [isActive, setIsActive] = useState(row.isActive);
-
-  const order = Number(toEnglishDigits(sortOrder).trim());
-  const changed = name.trim() !== row.name || order !== row.sortOrder || isActive !== row.isActive;
-  const valid = name.trim().length > 0 && Number.isInteger(order);
+  const [draft, setDraft] = useState<RoleDraft>(() => draftFrom(row));
+  const check = checkDraft(row, draft);
 
   const save = useMutation({
-    mutationFn: () =>
-      updateProjectRole({ id: row.id, patch: { name: name.trim(), sortOrder: order, isActive }, actor }),
+    mutationFn: () => updateProjectRole({ id: row.id, patch: check.patch, actor }),
     onSuccess: () => {
       toast.success(t('projectRoleSaved', { defaultValue: 'Role saved' }));
       void queryClient.invalidateQueries({ queryKey: ['dms', 'project-roles'] });
+      onDone();
     },
     onError: (error) => {
       toast.error(
@@ -170,36 +195,83 @@ function RoleRow({ row, actor }: { row: DmsProjectRoleRow; actor: DmsActor }) {
     },
   });
 
+  if (!editing) {
+    return (
+      <TableRow>
+        <TableCell>{row.name}</TableCell>
+        <TableCell className="text-muted-foreground">{row.code}</TableCell>
+        <TableCell>{row.sortOrder}</TableCell>
+        <TableCell>
+          {row.isActive ? (
+            <Badge variant="outline">{t('roleActive', { defaultValue: 'Active' })}</Badge>
+          ) : (
+            <Badge variant="secondary">{t('roleInactive', { defaultValue: 'Inactive' })}</Badge>
+          )}
+        </TableCell>
+        <TableCell>
+          <Button
+            variant="outline"
+            disabled={otherRowOpen}
+            onClick={() => {
+              // Open on the SAVED values, not on whatever a previous cancelled edit left behind.
+              setDraft(draftFrom(row));
+              onEdit();
+            }}
+          >
+            {t('edit', { defaultValue: 'Edit' })}
+          </Button>
+        </TableCell>
+      </TableRow>
+    );
+  }
+
   return (
     <TableRow>
       <TableCell>
-        <Input value={name} onChange={(e) => setName(e.target.value)} className="min-w-40" />
+        <Input
+          value={draft.name}
+          onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+          className="min-w-40"
+          aria-label={t('role', { defaultValue: 'Role' })}
+        />
       </TableCell>
       <TableCell className="text-muted-foreground">{row.code}</TableCell>
       <TableCell>
         <Input
-          value={sortOrder}
+          value={draft.sortOrder}
           inputMode="numeric"
-          onChange={(e) => setSortOrder(e.target.value)}
+          onChange={(e) => setDraft({ ...draft, sortOrder: e.target.value })}
           className="w-20"
+          aria-label={t('roleSortOrder', { defaultValue: 'Order' })}
         />
       </TableCell>
       <TableCell>
-        <div className="flex items-center gap-2">
-          <Checkbox checked={isActive} onCheckedChange={(v) => setIsActive(v === true)} />
-          {!row.isActive && (
-            <Badge variant="secondary">{t('roleInactive', { defaultValue: 'Inactive' })}</Badge>
-          )}
-        </div>
+        <Checkbox
+          checked={draft.isActive}
+          onCheckedChange={(v) => setDraft({ ...draft, isActive: v === true })}
+          aria-label={t('roleActive', { defaultValue: 'Active' })}
+        />
       </TableCell>
       <TableCell>
-        <Button
-          variant="outline"
-          disabled={!changed || !valid || save.isPending}
-          onClick={() => save.mutate()}
-        >
-          {save.isPending ? t('saving', { defaultValue: 'Saving…' }) : t('save', { defaultValue: 'Save' })}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="primary"
+            disabled={!check.changed || save.isPending}
+            onClick={() => save.mutate()}
+          >
+            {save.isPending ? t('saving', { defaultValue: 'Saving…' }) : t('save', { defaultValue: 'Save' })}
+          </Button>
+          <Button
+            variant="outline"
+            disabled={save.isPending}
+            onClick={() => {
+              setDraft(draftFrom(row));
+              onDone();
+            }}
+          >
+            {t('cancelEdit', { defaultValue: 'Cancel' })}
+          </Button>
+        </div>
       </TableCell>
     </TableRow>
   );
