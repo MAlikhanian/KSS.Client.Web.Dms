@@ -26,26 +26,48 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { resolveDmsAccess } from '@/lib/dms/access';
 import { decideRoute, normaliseDmsPath } from '@/lib/dms/route-access';
+import { normalizeHost, resolveTenant } from '@/lib/tenants';
 
 function isApi(pathname: string): boolean {
   return pathname.startsWith('/api/');
 }
 
+const LOOPBACK = /^(localhost|127\.\d{1,3}\.\d{1,3}\.\d{1,3})(:\d{1,5})?$/;
+
+/**
+ * The origin the VISITOR is on. Behind the Shell's rewrite this zone's own
+ * request URL carries the cluster Service DNS, not the visitor's host, so a
+ * redirect built from `req.nextUrl` would send the browser to an internal name.
+ * The Shell stamps the visitor's Host as `x-kss-host`.
+ *
+ * ⛔ THE HEADER IS NOT TRUSTED AS A DESTINATION. Only a host that is a key of
+ * this zone's TENANTS (the tenant hosts the ingress serves) is used, rebuilt
+ * from that key rather than copied from the header — otherwise anything able to
+ * set the header on a request reaching the zone could send a visitor to a
+ * sign-in page on a host of its choosing (an open redirect). A loopback host is
+ * also accepted, for local development. Anything else falls back to the
+ * request's own origin, which is also the right answer with no Shell in front.
+ * Public hosts are HTTPS only (the ingress enforces ssl-redirect); loopback is http.
+ */
+function visitorOrigin(req: NextRequest): string {
+  const header = req.headers.get('x-kss-host') ?? '';
+  if (LOOPBACK.test(header)) return `http://${header}`;
+  if (resolveTenant(header)) return `https://${normalizeHost(header)}`;
+  return req.nextUrl.origin;
+}
+
 /**
  * Sign-in lives at the HOST ROOT (the Shell's /signin), outside this zone's
- * basePath. The redirect is ROOT-RELATIVE on purpose: behind the Shell's rewrite
- * this zone may see an internal host, and an absolute URL built from the request
- * would send the browser there. A relative Location is resolved by the browser
- * against the host the visitor is actually on — the same discipline as
- * lib/auth-signout.ts.
+ * basePath. The Location MUST be absolute: Next's middleware runtime parses a
+ * redirect's Location as a URL with no base, and a relative one throws
+ * (ERR_INVALID_URL) — the visitor would get a 500 instead of the sign-in page.
  */
 function toSignIn(req: NextRequest, pathname: string): NextResponse {
   if (isApi(pathname)) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   const back = `${req.nextUrl.basePath}${pathname}${req.nextUrl.search}`;
-  return new NextResponse(null, {
-    status: 307,
-    headers: { Location: `/signin?callbackUrl=${encodeURIComponent(back)}` },
-  });
+  const target = new URL('/signin', visitorOrigin(req));
+  target.searchParams.set('callbackUrl', back);
+  return new NextResponse(null, { status: 307, headers: { Location: target.toString() } });
 }
 
 /** True when the Auth token inside the session has passed its stated expiry. */
@@ -86,5 +108,8 @@ export const config = {
   // Framework assets, the auth endpoints and the health probe are not DMS
   // routes. The probe in particular must answer without a session, or the
   // cluster would see a redirect and restart a healthy pod.
-  matcher: ['/((?!_next/static|_next/image|api/auth|api/health|favicon.ico).*)'],
+  // '/' is listed on its own: with a basePath, the pattern below compiles to
+  // /dms/(...) and does not match the bare zone root /dms, which would then
+  // be served with no guard at all.
+  matcher: ['/', '/((?!_next/static|_next/image|api/auth|api/health|favicon.ico).*)'],
 };
