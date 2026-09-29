@@ -26,10 +26,16 @@ import {
   listReports,
   listStoppagesForReport,
 } from '@/lib/dms/mock-store';
-import { CyclesSection, StoppagesSection } from '../_components';
+import {
+  CyclesSection,
+  ReportDateRange,
+  StoppagesSection,
+  type ReportDateRangeValue,
+} from '../_components';
 import { STATUS_BADGE } from '../_lib/report-status';
 import { useDmsActor } from '../_lib/use-dms-actor';
 import { DecisionSection } from './components';
+import { formatJalaliDate } from '../_lib/jalali-date';
 
 /**
  * Supervisor screen — §1: «مشاهده گزارش روزانه ثبت‌شده توسط اپراتور، تایید
@@ -38,12 +44,17 @@ import { DecisionSection } from './components';
  * The review list is Submitted days only, because that is the one status §3
  * makes reviewable. Draft is the operator's, Approved is permanently locked,
  * and Rejected is back with the operator.
+ *
+ * The list is filtered by a from/to range on the report date, because a
+ * supervisor with a long backlog needs to find the days of a given period.
  */
 export function ApprovalsContent() {
   const { t } = useTranslation('dms');
   const { actor, ready } = useDmsActor();
   const [projectId, setProjectId] = useState('');
   const [openReportId, setOpenReportId] = useState<string | null>(null);
+  const [range, setRange] = useState<ReportDateRangeValue>({ from: '', to: '' });
+  const rangeSet = range.from !== '' || range.to !== '';
 
   const projectsQuery = useQuery({
     queryKey: ['dms', 'projects'],
@@ -52,8 +63,14 @@ export function ApprovalsContent() {
   });
 
   const pendingQuery = useQuery({
-    queryKey: ['dms', 'reports', projectId, 'Submitted'],
-    queryFn: () => listReports({ projectId, status: 'Submitted' }),
+    queryKey: ['dms', 'reports', projectId, 'Submitted', range.from, range.to],
+    queryFn: () =>
+      listReports({
+        projectId,
+        status: 'Submitted',
+        from: range.from || undefined,
+        to: range.to || undefined,
+      }),
     enabled: !!projectId,
     retry: false,
   });
@@ -149,6 +166,14 @@ export function ApprovalsContent() {
                 ))}
               </SelectContent>
             </Select>
+            <ReportDateRange
+              idPrefix="dms-approval-range"
+              value={range}
+              onChange={(next) => {
+                setRange(next);
+                setOpenReportId(null);
+              }}
+            />
           </CardContent>
         </Card>
       </div>
@@ -183,10 +208,15 @@ export function ApprovalsContent() {
               {t('nothingPendingTitle', { defaultValue: 'Nothing to review' })}
             </h2>
             <p className="text-sm text-muted-foreground">
-              {t('nothingPendingBody', {
-                defaultValue:
-                  'No submitted days are waiting for this project.',
-              })}
+              {rangeSet
+                ? t('nothingPendingInRange', {
+                    defaultValue:
+                      'No submitted days are waiting for this project in the selected period.',
+                  })
+                : t('nothingPendingBody', {
+                    defaultValue:
+                      'No submitted days are waiting for this project.',
+                  })}
             </p>
           </CardContent>
         </Card>
@@ -202,7 +232,7 @@ export function ApprovalsContent() {
               <ul className="divide-y divide-border">
                 {pendingQuery.data.map((r) => (
                   <li key={r.id} className="py-2 flex items-center justify-between gap-4">
-                    <span className="text-sm">{r.reportDate}</span>
+                    <span className="text-sm">{formatJalaliDate(r.reportDate)}</span>
                     <Badge variant={STATUS_BADGE[r.approvalStatus].variant}>
                       {t(STATUS_BADGE[r.approvalStatus].key, {
                         defaultValue: STATUS_BADGE[r.approvalStatus].fallback,

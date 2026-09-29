@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { DmsDateInput } from '../../../../_components/dms-date-input';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
@@ -201,10 +202,12 @@ function FieldInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
         />
+      ) : field.kind === 'date' ? (
+        // Optional in the specification, so it can be emptied again.
+        <DmsDateInput id={id} value={value} onChange={onChange} clearable />
       ) : (
         <Input
           id={id}
-          type={field.kind === 'date' ? 'date' : undefined}
           inputMode={field.kind === 'number' ? 'decimal' : undefined}
           value={value}
           onChange={(e) =>

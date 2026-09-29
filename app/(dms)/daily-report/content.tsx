@@ -10,7 +10,7 @@ import {
 } from '@/components/common/toolbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { DmsDateInput } from '../_components/dms-date-input';
 import {
   Select,
   SelectContent,
@@ -28,6 +28,7 @@ import {
 import type { DmsDailyOperationReport } from '@/lib/dms/types';
 import { useDmsActor } from '../_lib/use-dms-actor';
 import { DailyReportForm } from './components';
+import { formatJalaliDate, todayIsoInTehran } from '../_lib/jalali-date';
 
 /**
  * Operator screen — §1: «ثبت گزارش روزانه، چرخه‌های عملیاتی و توقفات مربوط به
@@ -211,7 +212,7 @@ export function DailyReportContent() {
                     key={r.id}
                     className="py-2 flex items-center justify-between gap-4"
                   >
-                    <span className="text-sm">{r.reportDate}</span>
+                    <span className="text-sm">{formatJalaliDate(r.reportDate)}</span>
                     <span className="text-sm text-muted-foreground">
                       {r.approvalStatus}
                     </span>
@@ -239,15 +240,10 @@ export function DailyReportContent() {
 
 function NewDayButton({ onCreate }: { onCreate: (date: string) => void }) {
   const { t } = useTranslation('dms');
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => todayIsoInTehran());
   return (
     <div className="flex items-center gap-2">
-      <Input
-        type="date"
-        className="w-auto"
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-      />
+      <DmsDateInput className="w-56" value={date} onChange={setDate} />
       <Button variant="primary" onClick={() => onCreate(date)}>
         {t('startDay', { defaultValue: 'Start day' })}
       </Button>

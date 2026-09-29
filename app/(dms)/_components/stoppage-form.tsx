@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { DmsDateInput } from './dms-date-input';
 import {
   Select,
   SelectContent,
@@ -159,12 +160,7 @@ export function StoppageForm({
             {t('stoppageDate', { defaultValue: 'Date' })}{' '}
             <span className="text-destructive">*</span>
           </label>
-          <Input
-            id="stp-date"
-            type="date"
-            value={stoppageDate}
-            onChange={(e) => setStoppageDate(e.target.value)}
-          />
+          <DmsDateInput id="stp-date" value={stoppageDate} onChange={setStoppageDate} />
         </div>
 
         <div className="space-y-1.5">

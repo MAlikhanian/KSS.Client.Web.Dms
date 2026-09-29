@@ -27,6 +27,7 @@ import {
   listVesselAssignments,
 } from '@/lib/dms/mock-store';
 import { useDmsActor } from '../../_lib/use-dms-actor';
+import { formatJalaliDate } from '../../_lib/jalali-date';
 
 /**
  * ۲-۴ جدول تخصیص شناور به پروژه — the overview.
@@ -236,8 +237,8 @@ export function VesselAssignmentsContent() {
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell>{assignment?.assignmentDate ?? '—'}</TableCell>
-                          <TableCell>{assignment?.releaseDate ?? '—'}</TableCell>
+                          <TableCell>{formatJalaliDate(assignment?.assignmentDate) || '—'}</TableCell>
+                          <TableCell>{formatJalaliDate(assignment?.releaseDate) || '—'}</TableCell>
                           <TableCell>
                             {assignment ? (
                               <Button asChild variant="outline">

@@ -493,6 +493,12 @@ const SEED_STOPPAGE_TYPES: DmsStoppageType[] = [
   { id: 'dms-stp-type-3', code: 'CUTTER-FAIL', category: 'Technical', name: 'خرابی کاتر', isPlanned: false },
   { id: 'dms-stp-type-4', code: 'WEATHER', category: 'Operational', name: 'توقف به دلیل شرایط جوی', isPlanned: false },
   { id: 'dms-stp-type-5', code: 'WAIT-BARGE', category: 'Operational', name: 'انتظار برای بارج', isPlanned: false },
+  // The three codes the seeded stoppages dms-stp-4..6 carry. Without them the
+  // by-cause chart draws those minutes under bare codes. Only a store that has
+  // never been seeded receives these rows — seeding runs once per collection.
+  { id: 'dms-stp-type-6', code: 'CREW-BRIEF', category: 'Operational', name: 'توقف تا تعیین تکلیف فرمانده', isPlanned: false },
+  { id: 'dms-stp-type-7', code: 'SURVEY-WAIT', category: 'Operational', name: 'انتظار برای نقشه‌برداری', isPlanned: false },
+  { id: 'dms-stp-type-8', code: 'CE-HOLD', category: 'Operational', name: 'توقف به دستور ناظر', isPlanned: false },
 ];
 const SEED_STOPPAGES: DmsStoppage[] = [
   {

@@ -12,7 +12,7 @@ import {
 } from '@/components/common/toolbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { DmsDateInput } from '../../../_components/dms-date-input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -253,24 +253,14 @@ export function EditPersonnelAssignmentContent() {
                     <Label htmlFor="pa-edit-start">
                       {t('startDate', { defaultValue: 'Start date' })}
                     </Label>
-                    <Input
-                      id="pa-edit-start"
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                    />
+                    <DmsDateInput id="pa-edit-start" value={startDate} onChange={setStartDate} />
                   </div>
 
                   <div className="space-y-1">
                     <Label htmlFor="pa-edit-end">
                       {t('endDate', { defaultValue: 'End date' })}
                     </Label>
-                    <Input
-                      id="pa-edit-end"
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                    />
+                    <DmsDateInput id="pa-edit-end" value={endDate} onChange={setEndDate} clearable />
                     <p className="text-xs text-muted-foreground">
                       {/*
                        * ⚠ DMS-PROVISIONAL-TERM — «تاریخچه» (history)

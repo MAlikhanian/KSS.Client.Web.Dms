@@ -216,6 +216,13 @@ export const DMS_MENU_ENTRIES: readonly DmsMenuEntry[] = [
     dmsRoles: ['ProjectControl'],
   },
   {
+    // Head office's read-only view of the daily reports — view only, no entry.
+    path: '/dms/reports',
+    title: 'Daily Reports (view)',
+    titleKey: 'menuReports',
+    dmsRoles: ['ProjectControl'],
+  },
+  {
     path: '/dms/admin/projects',
     title: 'Projects',
     titleKey: 'menuProjects',

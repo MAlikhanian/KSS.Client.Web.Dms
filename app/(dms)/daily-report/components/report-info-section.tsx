@@ -12,6 +12,7 @@ import { isDmsError } from '@/lib/dms/errors';
 import { getProjectVessel, updateReport } from '@/lib/dms/mock-store';
 import type { DmsActor, DmsDailyOperationReport } from '@/lib/dms/types';
 import { STATUS_BADGE } from '../../_lib/report-status';
+import { formatJalaliDate } from '../../_lib/jalali-date';
 
 /** Section 1 — base info (flat fields). Blue, per the estate's kind→colour table. */
 export function ReportInfoSection({
@@ -78,7 +79,7 @@ export function ReportInfoSection({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
           <Field
             label={t('reportDate', { defaultValue: 'Report date' })}
-            value={report.reportDate}
+            value={formatJalaliDate(report.reportDate)}
           />
           <Field
             label={t('vessel', { defaultValue: 'Vessel' })}

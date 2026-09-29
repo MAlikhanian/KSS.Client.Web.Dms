@@ -12,7 +12,7 @@ import {
 } from '@/components/common/toolbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { DmsDateInput } from '../../../_components/dms-date-input';
 import {
   Select,
   SelectContent,
@@ -28,6 +28,7 @@ import {
   listVessels,
 } from '@/lib/dms/mock-store';
 import { useDmsActor } from '../../../_lib/use-dms-actor';
+import { todayIsoInTehran } from '../../../_lib/jalali-date';
 
 /**
  * Assign a vessel to a project — ۲-۴.
@@ -58,7 +59,7 @@ export function AssignVesselContent() {
   const [projectId, setProjectId] = useState('');
   const [vesselId, setVesselId] = useState('');
   const [assignmentDate, setAssignmentDate] = useState(() =>
-    new Date().toISOString().slice(0, 10),
+    todayIsoInTehran(),
   );
 
   // Prefilled when arriving from an unassigned row; still changeable here.
@@ -226,13 +227,7 @@ export function AssignVesselContent() {
               <span className="text-destructive">*</span>
             </label>
             {/* ۲-۴ «تاریخ تخصیص شناور به پروژه» */}
-            <Input
-              id="assign-date"
-              type="date"
-              className="w-auto"
-              value={assignmentDate}
-              onChange={(e) => setAssignmentDate(e.target.value)}
-            />
+            <DmsDateInput id="assign-date" value={assignmentDate} onChange={setAssignmentDate} className="max-w-xs" />
           </div>
         </CardContent>
       </Card>

@@ -13,7 +13,7 @@ import {
 } from 'recharts';
 import { Card, CardContent } from '@/components/ui/card';
 import { SampleDataWatermark } from '../../_components/sample-data';
-import type { PartyBar, TimeShareSlice } from '../chart-data';
+import type { CauseBar, TimeShareSlice } from '../chart-data';
 
 /**
  * §5's visualisations.
@@ -34,7 +34,7 @@ const PHASE_FILL: Record<string, string> = {
   Stoppage: '#dc2626',
 };
 
-const PARTY_FILL = '#2563eb';
+const CAUSE_FILL = '#2563eb';
 
 function Empty({ text }: { text: string }) {
   return <p className="py-10 text-center text-sm text-muted-foreground">{text}</p>;
@@ -101,27 +101,28 @@ export function TimeShareChart({
 }
 
 /**
- * «نمودار ستونی تحلیل توقفات» — stoppage minutes by responsible party.
+ * «نمودار ستونی تحلیل توقفات» — stoppage minutes by cause (stoppage type).
  *
- * ⚠ ALL FIVE CATEGORIES ARE DRAWN, INCLUDING ZEROS. A chart built only from
- * parties present in the data changes its own axis between renders — five bars
- * one day, two the next — and nothing distinguishes "no stoppages attributed to
- * this party" from "this party is not a category". The zero is the information.
+ * ⚠ EVERY TYPE IN THE LOOKUP IS DRAWN, INCLUDING ZEROS — see
+ * `stoppageMinutesByCause`. The zero is the information.
+ *
+ * Horizontal bars: a cause is a type NAME, often several words of Persian, and
+ * names that long do not fit under vertical bars without being cut.
  */
-export function StoppageByPartyChart({
+export function StoppageByCauseChart({
   title,
   bars,
   emptyText,
-  unattributedNote,
-  labelFor,
+  unknownCodeNote,
 }: {
   title: string;
-  bars: PartyBar[];
+  bars: CauseBar[];
   emptyText: string;
-  unattributedNote: string | null;
-  labelFor: (party: string) => string;
+  unknownCodeNote: string | null;
 }) {
   const total = bars.reduce((sum, b) => sum + b.minutes, 0);
+  // Height follows the number of causes so a long lookup does not squash bars.
+  const height = Math.max(160, bars.length * 36 + 40);
   return (
     <Card>
       <CardContent className="py-4 space-y-3">
@@ -129,20 +130,24 @@ export function StoppageByPartyChart({
         {total <= 0 ? (
           <Empty text={emptyText} />
         ) : (
-          <div className="relative h-64">
+          <div className="relative" style={{ height }}>
             <SampleDataWatermark />
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={bars.map((b) => ({ ...b, name: labelFor(b.party) }))}>
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
+              <BarChart
+                layout="vertical"
+                data={bars.map((b) => ({ ...b, label: b.name ?? b.code }))}
+                margin={{ left: 8, right: 8 }}
+              >
+                <XAxis type="number" tick={{ fontSize: 12 }} />
+                <YAxis type="category" dataKey="label" width={180} tick={{ fontSize: 12 }} />
                 <Tooltip formatter={(value: number) => Math.round(value)} />
-                <Bar dataKey="minutes" fill={PARTY_FILL} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="minutes" fill={CAUSE_FILL} radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         )}
-        {unattributedNote && (
-          <p className="text-xs text-amber-600 dark:text-amber-500">{unattributedNote}</p>
+        {unknownCodeNote && (
+          <p className="text-xs text-amber-600 dark:text-amber-500">{unknownCodeNote}</p>
         )}
       </CardContent>
     </Card>

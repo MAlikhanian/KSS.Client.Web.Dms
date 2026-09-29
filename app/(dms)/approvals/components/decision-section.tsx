@@ -10,6 +10,7 @@ import { isDmsError } from '@/lib/dms/errors';
 import { transitionReport } from '@/lib/dms/mock-store';
 import type { DmsActor, DmsDailyOperationReport } from '@/lib/dms/types';
 import { canTransition, type ReportAction } from '@/lib/dms/workflow';
+import { formatJalaliDate } from '../../_lib/jalali-date';
 
 /**
  * Approve, or reject with a reason. Black/white border.
@@ -60,7 +61,7 @@ export function DecisionSection({
     <Card>
       <CardHeader>
         <CardTitle>
-          {t('decision', { defaultValue: 'Decision' })} — {report.reportDate}
+          {t('decision', { defaultValue: 'Decision' })} — {formatJalaliDate(report.reportDate)}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">

@@ -40,6 +40,9 @@ const ROUTE_ROLES: ReadonlyArray<{ prefix: string; roles: readonly DmsRole[] }> 
   { prefix: '/approvals', roles: ['VesselSupervisor'] },
   // کنترل پروژه sees the dashboard. §1: «مشاهده داشبورد کلان مدیریتی».
   { prefix: '/dashboard', roles: ['ProjectControl'] },
+  // Head office's READ-ONLY view of the daily reports. Its own route, so the
+  // operator's entry screen above stays Operator-only rather than being widened.
+  { prefix: '/reports', roles: ['ProjectControl'] },
   // The definition tables — §1 scopes head office's CRUD to exactly these.
   { prefix: '/admin', roles: ['ProjectControl'] },
 ];

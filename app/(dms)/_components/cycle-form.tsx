@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { DmsDateInput } from './dms-date-input';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from '@/hooks/useTranslation';
 import { minutesBetween } from '@/lib/dms/kpi';
@@ -108,12 +109,7 @@ export function CycleForm({
           {t('cycleDate', { defaultValue: 'Date' })}{' '}
           <span className="text-destructive">*</span>
         </label>
-        <Input
-          id="cyc-date"
-          type="date"
-          value={cycleDate}
-          onChange={(e) => setCycleDate(e.target.value)}
-        />
+        <DmsDateInput id="cyc-date" value={cycleDate} onChange={setCycleDate} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

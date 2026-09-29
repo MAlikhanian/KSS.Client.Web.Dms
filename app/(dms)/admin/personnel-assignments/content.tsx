@@ -12,7 +12,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { DmsDateInput } from '../../_components/dms-date-input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -39,6 +39,7 @@ import {
   listShifts,
 } from '@/lib/dms/mock-store';
 import { useDmsActor } from '../../_lib/use-dms-actor';
+import { formatJalaliDate, todayIsoInTehran } from '../../_lib/jalali-date';
 
 /**
  * ۲-۶ جدول تخصیص پرسنل به پروژه‌ها — the administration view.
@@ -71,7 +72,7 @@ export function PersonnelAssignmentsContent() {
   const [projectId, setProjectId] = useState('');
   // Today, as the natural question. Editable, because "who was on this in
   // March" is a real question and the answer is already in the data.
-  const [onDate, setOnDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [onDate, setOnDate] = useState(() => todayIsoInTehran());
 
   const [projectsQuery, personnelQuery, shiftsQuery] = useQueries({
     queries: [
@@ -215,12 +216,7 @@ export function PersonnelAssignmentsContent() {
                 <Label htmlFor="pa-on-date">
                   {t('activeOnDate', { defaultValue: 'Show status on' })}
                 </Label>
-                <Input
-                  id="pa-on-date"
-                  type="date"
-                  value={onDate}
-                  onChange={(e) => setOnDate(e.target.value)}
-                />
+                <DmsDateInput id="pa-on-date" value={onDate} onChange={setOnDate} />
                 <p className="text-xs text-muted-foreground">
                   {t('activeOnDateHint', {
                     defaultValue:
@@ -331,9 +327,11 @@ export function PersonnelAssignmentsContent() {
                           <TableCell>
                             {shift ? `${shift.name} (${shift.timeRangeText})` : '—'}
                           </TableCell>
-                          <TableCell>{a.startDate}</TableCell>
+                          <TableCell>{formatJalaliDate(a.startDate)}</TableCell>
                           <TableCell>
-                            {a.endDate ?? t('openEnded', { defaultValue: 'Open' })}
+                            {a.endDate !== undefined
+                               ? formatJalaliDate(a.endDate)
+                               : t('openEnded', { defaultValue: 'Open' })}
                           </TableCell>
                           <TableCell>
                             <Badge variant={active ? 'primary' : 'outline'}>

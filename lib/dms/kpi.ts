@@ -552,7 +552,7 @@ export function computeKpis(input: {
             value: totals.roundTripMinutes / totals.cycleCount,
             unit: 'minutes',
             basis:
-              'میانگین بازهٔ زمانی از شروع هر چرخه تا بازگشت شناور به محل لایروبی، برای چرخه‌های تکمیل‌شده.',
+              'میانگین بازهٔ زمانی از شروع هر سیکل تا بازگشت شناور به محل لایروبی، برای سیکل‌های تکمیل‌شده.',
           }
         : {
             kind: 'not-applicable',

@@ -25,13 +25,14 @@ import {
   listCyclesForProject,
   listProjects,
   listStoppagesForProject,
+  listStoppageTypes,
 } from '@/lib/dms/mock-store';
 import { formatMinutes } from '../_lib/report-status';
 import { useDmsActor } from '../_lib/use-dms-actor';
 import { loadAggregate } from './aggregate';
 import {
   physicalProgressPercent,
-  stoppageMinutesByParty,
+  stoppageMinutesByCause,
   timeShareSlices,
 } from './chart-data';
 import {
@@ -39,7 +40,7 @@ import {
   KpiFigureTile,
   KpiQuantityTile,
   PhysicalProgressPanel,
-  StoppageByPartyChart,
+  StoppageByCauseChart,
   TimeShareChart,
 } from './components';
 import { SampleDataPageLine } from '../_components/sample-data';
@@ -60,8 +61,8 @@ import { SampleDataPageLine } from '../_components/sample-data';
  *
  * ─── THE SPECIFIED VISUALISATIONS — THREE CHARTS AND ONE NAMED GAP ───────────────────
  * The customer asked for this screen to become graphical and to be the DMS home
- * page. Three of the four specified charts render: time share, stoppages by responsible party,
- * physical progress.
+ * page. Three of the four specified charts render: time share, stoppages by cause
+ * (stoppage type — the customer replaced the responsible-party split), physical progress.
  *
  * ⛔ FINANCIAL PROGRESS IS A NAMED GAP, NOT A MISSING CHART. With the fields the
  * specification defines it is the SAME NUMBER as physical progress —
@@ -143,6 +144,15 @@ export function DashboardContent() {
     ],
   });
 
+  // The stoppage-type lookup names the causes on the stoppage chart. Project-
+  // independent, so it is fetched once rather than per selection.
+  const stoppageTypesQuery = useQuery({
+    queryKey: ['dms', 'stoppage-types'],
+    queryFn: () => listStoppageTypes({}),
+    enabled: ready,
+    retry: false,
+  });
+
   if (!ready) {
     return (
       <Card>
@@ -183,11 +193,14 @@ export function DashboardContent() {
 
   const project = projectsQuery.data?.find((p) => p.id === projectId);
 
-  // Shaped once for the specified stoppage chart: bars and the unattributed total
-  // come from ONE call, so they cannot disagree about the same rows.
-  const partyStoppages = stoppageMinutesByParty({
+  // Shaped once for the specified stoppage chart: bars and the unknown-code total
+  // come from ONE call, so they cannot disagree about the same rows. If the type
+  // lookup fails to load, every row falls into an unknown-code bar keyed by its
+  // raw code — the minutes are still drawn, and the note says why they are bare.
+  const causeStoppages = stoppageMinutesByCause({
     reports: approvedQuery.data ?? [],
     stoppages: stoppagesQuery.data ?? [],
+    types: stoppageTypesQuery.data ?? [],
   });
 
   const kpis =
@@ -310,14 +323,10 @@ export function DashboardContent() {
               </p>
             )}
 
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2">
               <KpiQuantityTile
                 label={t('projectsIncluded', { defaultValue: 'Projects included' })}
                 value={String(aggregateQuery.data.included.length)}
-              />
-              <KpiQuantityTile
-                label={t('approvedReports', { defaultValue: 'Approved reports' })}
-                value={String(aggregateQuery.data.reports.length)}
               />
               <KpiQuantityTile
                 label={t('dredgedVolume', { defaultValue: 'Dredged volume' })}
@@ -437,32 +446,21 @@ export function DashboardContent() {
               }
             />
 
-            <StoppageByPartyChart
-              title={t('chartStoppageParty', {
-                defaultValue: 'Stoppages by responsible party',
+            <StoppageByCauseChart
+              title={t('chartStoppageCause', {
+                defaultValue: 'Stoppage analysis by cause',
               })}
-              bars={partyStoppages.bars}
+              bars={causeStoppages.bars}
               emptyText={t('chartNoStoppages', {
                 defaultValue: 'No stoppages recorded yet.',
               })}
-              unattributedNote={
-                partyStoppages.unattributedMinutes > 0
-                  ? t('chartUnattributed', {
+              unknownCodeNote={
+                causeStoppages.unknownCodeMinutes > 0
+                  ? t('chartUnknownStoppageCode', {
                       defaultValue:
-                        'Some stoppages have no responsible party recorded and are not in any bar.',
+                        'Some stoppages carry a code that is not in the stoppage types table; they are shown under that code.',
                     })
                   : null
-              }
-              labelFor={(party) =>
-                ({
-                  Master: t('partyMaster', { defaultValue: 'Master' }),
-                  Client: t('partyClient', { defaultValue: 'Client' }),
-                  Dredge: t('partyDredge', { defaultValue: 'Dredge' }),
-                  Survey: t('partySurvey', { defaultValue: 'Survey' }),
-                  // His document supplies BOTH languages for this enum — 'CE' / «ناظر».
-                  // The fallback matches his English, not a friendlier expansion.
-                  CE: t('partyCe', { defaultValue: 'CE' }),
-                })[party] ?? party
               }
             />
 
@@ -496,12 +494,6 @@ export function DashboardContent() {
 
           {/* The specification's defined quantities. */}
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            <KpiQuantityTile
-              label={t('approvedReports', {
-                defaultValue: 'Approved reports',
-              })}
-              value={String(kpis.totals.reportCount)}
-            />
             <KpiQuantityTile
               label={t('tOp', { defaultValue: 'T_OP — operating time' })}
               value={formatMinutes(kpis.totals.operatingMinutes)}

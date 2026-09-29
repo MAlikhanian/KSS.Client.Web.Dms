@@ -13,7 +13,7 @@ import {
 } from '@/components/common/toolbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { DmsDateInput } from '../../../_components/dms-date-input';
 import {
   Select,
   SelectContent,
@@ -292,24 +292,14 @@ export function EditVesselAssignmentContent() {
                       <label className="text-sm font-medium block" htmlFor="correct-assigned">
                         {t('assignmentDate', { defaultValue: 'Assignment date' })}
                       </label>
-                      <Input
-                        id="correct-assigned"
-                        type="date"
-                        value={assignmentDate}
-                        onChange={(e) => setAssignmentDate(e.target.value)}
-                      />
+                      <DmsDateInput id="correct-assigned" value={assignmentDate} onChange={setAssignmentDate} />
                     </div>
 
                     <div className="space-y-2">
                       <label className="text-sm font-medium block" htmlFor="correct-released">
                         {t('releaseDate', { defaultValue: 'Release date' })}
                       </label>
-                      <Input
-                        id="correct-released"
-                        type="date"
-                        value={releaseDate}
-                        onChange={(e) => setReleaseDate(e.target.value)}
-                      />
+                      <DmsDateInput id="correct-released" value={releaseDate} onChange={setReleaseDate} clearable />
                       <p className="text-xs text-muted-foreground">
                         {t('releaseDateNote', {
                           defaultValue:

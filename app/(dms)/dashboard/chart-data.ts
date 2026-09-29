@@ -2,9 +2,9 @@ import type {
   ApprovedDailyReport,
   CyclePhase,
   DmsStoppage,
-  ResponsibleParty,
+  DmsStoppageType,
 } from '@/lib/dms/types';
-import { ALL_CYCLE_PHASES, ALL_RESPONSIBLE_PARTIES } from '@/lib/dms/types';
+import { ALL_CYCLE_PHASES } from '@/lib/dms/types';
 import type { DmsIntermediateTotals } from '@/lib/dms/kpi';
 import { stoppageHoursToMinutes } from '@/lib/dms/kpi';
 
@@ -53,45 +53,64 @@ export function timeShareSlices(totals: DmsIntermediateTotals): TimeShareSlice[]
 }
 
 /** One bar of «نمودار ستونی تحلیل توقفات». */
-export interface PartyBar {
-  party: ResponsibleParty;
+export interface CauseBar {
+  /** The stoppage code — the join key between a row and the type lookup. */
+  code: string;
+  /** The type's name, or null when the code matches no row of the lookup. */
+  name: string | null;
   minutes: number;
 }
 
 /**
- * Stoppage minutes by responsible party.
+ * Stoppage minutes by CAUSE — the stoppage type, not the responsible party.
+ * The customer asked for the analysis to be by the causes of the stoppages
+ * rather than by who was responsible for them.
  *
- * ⚠ ALL FIVE PARTIES ARE ALWAYS RETURNED, INCLUDING ZEROS. A bar chart built
- * only from parties present in the data silently changes its own axis: five
- * categories one day, two the next, and nothing says a category is missing
- * rather than empty. The zero IS the information.
+ * ⚠ EVERY TYPE IN THE LOOKUP IS RETURNED, INCLUDING ZEROS, in lookup order. A
+ * chart built only from causes present in the data changes its own axis between
+ * renders, and nothing says a cause is missing rather than empty. The zero IS
+ * the information.
  *
- * ⚠ `responsibleParty` is OPTIONAL on the source row. Stoppages without one are
- * counted in `unattributedMinutes` rather than dropped — a total that quietly
- * omits rows is the defect this whole screen is built against.
+ * ⚠ A ROW WHOSE CODE MATCHES NO TYPE STILL GETS A BAR, keyed by its raw code with
+ * `name: null`, after the lookup's bars. The row stores the code as a string, not
+ * a reference, so a code can outlive or predate its lookup row. Dropping those
+ * minutes would make the bars sum to less than the stoppage total with nothing
+ * saying why — the defect this whole screen is built against.
  */
-export function stoppageMinutesByParty(input: {
+export function stoppageMinutesByCause(input: {
   reports: ApprovedDailyReport[];
   stoppages: DmsStoppage[];
-}): { bars: PartyBar[]; unattributedMinutes: number } {
+  types: DmsStoppageType[];
+}): { bars: CauseBar[]; unknownCodeMinutes: number } {
   // Mirrors the filter in `computeIntermediateTotals`: the brand proves the
   // REPORTS are approved; the stoppages carry no such proof, so they are
   // narrowed here rather than trusted.
   const approved = new Set(input.reports.map((r) => r.id));
   const rows = input.stoppages.filter((s) => approved.has(s.reportId));
 
-  const bars = ALL_RESPONSIBLE_PARTIES.map((party) => ({
-    party,
-    minutes: rows
-      .filter((s) => s.responsibleParty === party)
-      .reduce((sum, s) => sum + stoppageHoursToMinutes(s.durationHours), 0),
+  const minutesByCode = new Map<string, number>();
+  for (const s of rows) {
+    minutesByCode.set(
+      s.stoppageCode,
+      (minutesByCode.get(s.stoppageCode) ?? 0) + stoppageHoursToMinutes(s.durationHours),
+    );
+  }
+
+  const known = new Set(input.types.map((type) => type.code));
+  const bars: CauseBar[] = input.types.map((type) => ({
+    code: type.code,
+    name: type.name,
+    minutes: minutesByCode.get(type.code) ?? 0,
   }));
 
-  const unattributedMinutes = rows
-    .filter((s) => s.responsibleParty === undefined)
-    .reduce((sum, s) => sum + stoppageHoursToMinutes(s.durationHours), 0);
+  let unknownCodeMinutes = 0;
+  for (const [code, minutes] of Array.from(minutesByCode)) {
+    if (known.has(code)) continue;
+    bars.push({ code, name: null, minutes });
+    unknownCodeMinutes += minutes;
+  }
 
-  return { bars, unattributedMinutes };
+  return { bars, unknownCodeMinutes };
 }
 
 /**
