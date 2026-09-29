@@ -270,6 +270,14 @@ export const DMS_MENU_ENTRIES: readonly DmsMenuEntry[] = [
     titleKey: 'menuPersonnelAssignment',
     dmsRoles: ['ProjectControl'],
   },
+  {
+    // Project Control's corrected monthly volume, with the service's comparison
+    // against the reported volume on the same screen.
+    path: '/dms/admin/monthly-volume-corrections',
+    title: 'Corrected dredging volume (monthly)',
+    titleKey: 'menuMonthlyVolumeCorrections',
+    dmsRoles: ['ProjectControl'],
+  },
 ] as const;
 
 /**

@@ -966,7 +966,54 @@ export interface DmsDashboard {
   };
   timeShare: { key: 'Dredging' | 'Transport' | 'Discharge' | 'Return' | 'Stoppage'; minutes: number }[];
   stoppagesByCause: { bars: { code: string; name: string | null; minutes: number }[]; unknownTypeMinutes: number };
+  /**
+   * Project Control's corrected cumulative volume beside the estimate from
+   * APPROVED cycles, one row per corrected month. Filled only when the query
+   * names ONE project, and only from that project's PROJECT-LEVEL corrections
+   * (no subproject). Empty otherwise.
+   */
+  volumeCorrections: DmsVolumeCorrectionComparison[];
 }
+
+export interface DmsVolumeCorrectionComparison {
+  jalaliYear: number;
+  jalaliMonth: number;
+  /** Cumulative dredged volume to the end of the month, from approved cycles. */
+  estimatedCumulativeVolumeM3: number;
+  correctedCumulativeVolumeM3: number;
+  /** corrected − estimated, computed by the service. */
+  differenceM3: number;
+}
+
+/**
+ * Project Control's corrected CUMULATIVE dredged volume at the end of one
+ * Jalali month. One row per project, subproject (or none) and month; a second
+ * row for the same month is refused with 409 DUPLICATE_MONTH.
+ */
+export interface DmsMonthlyVolumeCorrection {
+  id: string;
+  projectId: string;
+  /** Absent for a whole-project figure. */
+  subprojectId?: string;
+  jalaliYear: number;
+  jalaliMonth: number;
+  correctedCumulativeVolumeM3: number;
+  notes?: string;
+}
+
+/** What an edit may change. The project is the row's identity and is excluded. */
+export type MonthlyVolumeCorrectionPatch = Partial<
+  Pick<
+    DmsMonthlyVolumeCorrection,
+    'subprojectId' | 'jalaliYear' | 'jalaliMonth' | 'correctedCumulativeVolumeM3' | 'notes'
+  >
+>;
+
+/** Build fails if the patch is ever widened to admit the row's identity. */
+export const CORRECTION_PATCH_EXCLUDES_IDENTITY: AssertEqual<
+  Extract<keyof MonthlyVolumeCorrectionPatch, 'id' | 'projectId'>,
+  never
+> = true;
 
 export interface StoppageTypeQuery {
   query?: string;

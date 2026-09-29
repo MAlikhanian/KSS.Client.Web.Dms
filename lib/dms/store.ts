@@ -26,6 +26,7 @@ import type {
   DmsDailyOperationReport,
   DmsDashboard,
   DmsMe,
+  DmsMonthlyVolumeCorrection,
   DmsPersonnel,
   DmsPersonnelAssignment,
   DmsProject,
@@ -38,6 +39,7 @@ import type {
   DmsVesselAssignment,
   DmsVesselType,
   EntityRef,
+  MonthlyVolumeCorrectionPatch,
   PersonnelAssignmentPatch,
   PersonnelPatch,
   ProjectPatch,
@@ -496,6 +498,50 @@ export async function updateStoppageType(args: {
   actor: DmsActor;
 }): Promise<DmsStoppageType> {
   return send<DmsStoppageType>('PATCH', `/stoppage-types/${seg(args.id)}`, toPatchBody(args.patch));
+}
+
+// ─── Monthly volume corrections (Project Control) ───────────────────────────
+
+/** Every correction of one project, whole-project and per-subproject, by month. */
+export async function listMonthlyVolumeCorrections({
+  projectId,
+}: ProjectRef): Promise<DmsMonthlyVolumeCorrection[]> {
+  return list<DmsMonthlyVolumeCorrection>(`/projects/${seg(projectId)}/monthly-volume-corrections`);
+}
+
+export async function getMonthlyVolumeCorrection({ id }: EntityRef): Promise<DmsMonthlyVolumeCorrection> {
+  return get<DmsMonthlyVolumeCorrection>(`/monthly-volume-corrections/${seg(id)}`);
+}
+
+/** Refused (409 DUPLICATE_MONTH) when the project/subproject already has a figure for that month. */
+export async function createMonthlyVolumeCorrection(args: {
+  projectId: string;
+  subprojectId?: string;
+  jalaliYear: number;
+  jalaliMonth: number;
+  correctedCumulativeVolumeM3: number;
+  notes?: string;
+  actor: DmsActor;
+}): Promise<DmsMonthlyVolumeCorrection> {
+  return send<DmsMonthlyVolumeCorrection>('POST', `/projects/${seg(args.projectId)}/monthly-volume-corrections`, {
+    jalaliYear: args.jalaliYear,
+    jalaliMonth: args.jalaliMonth,
+    correctedCumulativeVolumeM3: args.correctedCumulativeVolumeM3,
+    ...(args.subprojectId !== undefined ? { subprojectId: args.subprojectId } : {}),
+    ...(args.notes !== undefined ? { notes: args.notes } : {}),
+  });
+}
+
+export async function updateMonthlyVolumeCorrection(args: {
+  id: string;
+  patch: MonthlyVolumeCorrectionPatch;
+  actor: DmsActor;
+}): Promise<DmsMonthlyVolumeCorrection> {
+  return send<DmsMonthlyVolumeCorrection>('PATCH', `/monthly-volume-corrections/${seg(args.id)}`, toPatchBody(args.patch));
+}
+
+export async function deleteMonthlyVolumeCorrection(args: { id: string; actor: DmsActor }): Promise<void> {
+  return remove(`/monthly-volume-corrections/${seg(args.id)}`);
 }
 
 // ─── Dashboard ──────────────────────────────────────────────────────────────
