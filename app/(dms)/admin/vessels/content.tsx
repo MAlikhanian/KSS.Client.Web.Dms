@@ -25,6 +25,7 @@ import { isDmsError } from '@/lib/dms/errors';
 import { listVessels } from '@/lib/dms/mock-store';
 import { useDmsActor } from '../../_lib/use-dms-actor';
 import { SampleDataPageLine, SampleDataTable } from '../../_components/sample-data';
+import { useVesselTypes, vesselTypeLabel } from '../../_components/vessel-type-select';
 
 /**
  * Vessels list — ۲-۳ جدول مشخصات فنی شناورها.
@@ -38,8 +39,9 @@ import { SampleDataPageLine, SampleDataTable } from '../../_components/sample-da
  * empty result, distinct from a load that failed, and the screen says which.
  */
 export function VesselsContent() {
-  const { t } = useTranslation('dms');
+  const { t, i18n } = useTranslation('dms');
   const { actor, ready } = useDmsActor();
+  const typesQuery = useVesselTypes();
   const [query, setQuery] = useState('');
 
   const vesselsQuery = useQuery({
@@ -169,7 +171,7 @@ export function VesselsContent() {
                       <TableRow key={v.id}>
                         <TableCell>{v.vesselCode}</TableCell>
                         <TableCell>{v.name}</TableCell>
-                        <TableCell>{v.vesselType ?? '—'}</TableCell>
+                        <TableCell>{vesselTypeLabel(typesQuery.data, v.vesselType, i18n.language)}</TableCell>
                         <TableCell>{v.actualDailyCapacityM3 ?? '—'}</TableCell>
                         <TableCell>
                           <Button asChild variant="outline">

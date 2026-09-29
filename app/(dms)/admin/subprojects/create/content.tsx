@@ -17,6 +17,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
 import { createSubproject, getProject } from '@/lib/dms/mock-store';
 import { useDmsActor } from '../../../_lib/use-dms-actor';
+import { VesselSelect } from '../../../_components/vessel-select';
 
 /**
  * A SEED, NOT A FORM. ۲-۲ has 24 columns and this page asks for one.
@@ -35,7 +36,9 @@ export function CreateSubprojectContent() {
   const projectId = searchParams.get('projectId');
 
   const [title, setTitle] = useState('');
-  const isValid = title.trim().length > 0;
+  // Required: a subproject's vessel is one of the defined vessels.
+  const [vesselId, setVesselId] = useState('');
+  const isValid = title.trim().length > 0 && vesselId !== '';
 
   const projectQuery = useQuery({
     queryKey: ['dms', 'project', projectId],
@@ -47,7 +50,7 @@ export function CreateSubprojectContent() {
   const createMutation = useMutation({
     mutationFn: () => {
       if (!actor || !projectId) throw new Error('No actor or project');
-      return createSubproject({ projectId, title, actor });
+      return createSubproject({ projectId, title, vesselId, actor });
     },
     onSuccess: (created) => {
       toast.success(
@@ -196,6 +199,14 @@ export function CreateSubprojectContent() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium block" htmlFor="subproject-vessel">
+              {t('vessel', { defaultValue: 'Vessel' })}{' '}
+              <span className="text-destructive">*</span>
+            </label>
+            <VesselSelect id="subproject-vessel" value={vesselId} onChange={setVesselId} />
           </div>
         </CardContent>
       </Card>

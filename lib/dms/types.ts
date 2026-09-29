@@ -322,13 +322,18 @@ export interface DmsSubproject {
   location?: string; // PROPOSED — name ours, FRD ۲-۲ «موقعیت جغرافیایی»
   initialVolumeM3?: number; // PROPOSED — name ours, FRD ۲-۲ «حجم اولیه»
   /**
-   * ۲-۲ carries the vessel as free TEXT on the subproject, while ۲-۴ makes it
-   * a FK on the project. That is a THIRD place a vessel appears and a second
-   * source of the same truth. Kept because it is their schema; never read as
-   * the authoritative link — getProjectVessel is that.
+   * The subproject's vessel: a REQUIRED link to one of the defined vessels.
+   *
+   * ۲-۲ carried the vessel as free text («نام شناور مورد استفاده») beside a
+   * separate «نوع شناور». The customer has since settled that a subproject's
+   * vessel is one of the defined vessels, so both text columns are gone: the
+   * name and the type are the vessel's own. The database requires the link.
    */
-  vesselType?: string; // PROPOSED — name ours, FRD ۲-۲ «نوع شناور»
-  vesselNameUsed?: string; // PROPOSED — name ours, FRD ۲-۲ «نام شناور مورد استفاده»
+  vesselId: string; // PROPOSED — name ours; replaces FRD ۲-۲ «نام شناور مورد استفاده» and «نوع شناور»
+  /** READ-ONLY output: the linked vessel's type CODE. Derived on read; never patchable. */
+  readonly vesselType?: string;
+  /** READ-ONLY output: the linked vessel's name. Derived on read; never patchable. */
+  readonly vesselNameUsed?: string;
   finalVolumeM3?: number; // PROPOSED — name ours, FRD ۲-۲ «حجم نهایی»
   initialMaps?: string; // PROPOSED — name ours, FRD ۲-۲ «نقشه‌های اولیه»
   summary?: string; // PROPOSED — name ours, FRD ۲-۲ «شرح مختصر زیرپروژه»
@@ -355,22 +360,20 @@ export interface DmsVessel {
   vesselCode: string; // PROPOSED — name ours, FRD ۲-۳ «کد شناور» (auto-generated)
   name: string; // PROPOSED — name ours, FRD ۲-۳ «نام شناور»
   /**
-   * ۲-۳ «نوع شناور | متنی | کاترساکشن / هاپرساکشن و غیره».
+   * ۲-۳ «نوع شناور» — the CODE of a row in the vessel-types lookup
+   * (`DmsVesselType.code`, e.g. `CUTTER_SUCTION`), not free text.
    *
-   * ⚠ «کاترساکشن» AND «هاپرساکشن» ARE HIS, NOT OUR TRANSLITERATIONS — they
-   * appear in ۲-۳ and are what the seed uses. Nothing about vessel types is
-   * an open question for the customer.
-   *
-   * ⛔ «و غیره» IS THE LOAD-BEARING PART: he marks these as EXAMPLES, not a
-   * closed set — the same shape as ۲-۹'s «دسته‌بندی | مانند فنی، عملیاتی،
-   * برنامه‌ریزی‌شده». So the column stays free TEXT and a seed carrying two
-   * types is following his framing rather than narrowing it.
-   *
-   * DO NOT "complete" this into an enum or a lookup table on his behalf. The
-   * absence of a fixed list is his decision, and it is written down.
+   * The FRD gave examples ending «و غیره» and the column was kept as free text
+   * on that basis. The customer has since asked for vessels to be categorised
+   * by type and named the four types, so the lookup is the customer's own
+   * requirement, not a closed set we imposed. Unknown or inactive codes are
+   * refused (Validation, details.vesselType = 'unknown'), matching the API.
+   * A store written before this change may still hold free text; screens show
+   * such a value as it is and ask for a type to be picked.
    */
   vesselType?: string; // PROPOSED — name ours, FRD ۲-۳ «نوع شناور»
   manufacturer?: string; // PROPOSED — name ours, FRD ۲-۳ «سازنده»
+  /** A JALALI year, 1300–1500; refitYear >= buildYear. Checked in the store and the API. */
   buildYear?: number; // PROPOSED — name ours, FRD ۲-۳ «سال ساخت»
   refitYear?: number; // PROPOSED — name ours, FRD ۲-۳ «سال بازسازی»
   portOfRegistry?: string; // PROPOSED — name ours, FRD ۲-۳ «بندر ثبت»
@@ -380,16 +383,30 @@ export interface DmsVessel {
   pontoonLengthM?: number; // PROPOSED — name ours, FRD ۲-۳ «طول پانتون»
   overallLengthM?: number; // PROPOSED — name ours, FRD ۲-۳ «طول کلی»
   beamM?: number; // PROPOSED — name ours, FRD ۲-۳ «عرض»
-  weight?: number; // PROPOSED — name ours, FRD ۲-۳ «وزن» (tonnes or kg — the FRD says «تن یا کیلوگرم» and does not choose)
+  weight?: number; // PROPOSED — name ours, FRD ۲-۳ «وزن» — TONNES (the customer fixed the unit the FRD left open)
   draftM?: number; // PROPOSED — name ours, FRD ۲-۳ «آبخور»
   dredgingDepthM?: number; // PROPOSED — name ours, FRD ۲-۳ «عمق لایروبی»
   cutterPowerKw?: number; // PROPOSED — name ours, FRD ۲-۳ «توان کاتر»
   /** The denominator §5's physical-progress view needs. */
   actualDailyCapacityM3?: number; // PROPOSED — name ours, FRD ۲-۳ «ظرفیت واقعی روزانه»
-  enginePower?: number; // PROPOSED — name ours, FRD ۲-۳ «توان موتور»
+  enginePower?: number; // PROPOSED — name ours, FRD ۲-۳ «توان موتور» — kW (our choice; labelled as such)
   pumpShaftPower?: number; // PROPOSED — name ours, FRD ۲-۳ «توان شفت پمپ»
   cutterShaftPower?: number; // PROPOSED — name ours, FRD ۲-۳ «توان شفت کاتر»
-  speed?: number; // PROPOSED — name ours, FRD ۲-۳ «سرعت» (knots or an operational unit)
+  speed?: number; // PROPOSED — name ours, FRD ۲-۳ «سرعت» — KNOTS (the customer fixed the unit the FRD left open)
+}
+
+/**
+ * The vessel-types lookup. Same shape as the API's `GET vessel-types`, so the
+ * swap stays one line. Seeded with the four types the customer named.
+ */
+export interface DmsVesselType {
+  id: string;
+  code: string;
+  /** Persian name, as the customer wrote it. */
+  name: string;
+  nameEn: string;
+  sortOrder: number;
+  isActive: boolean;
 }
 
 // ─── ۲-۴ جدول تخصیص شناور به پروژه ──────────────────────────────────────────
@@ -868,15 +885,18 @@ export interface SubprojectQuery {
  *                      operation that reissues the code.
  */
 export type SubprojectPatch = Partial<
-  Omit<DmsSubproject, 'id' | 'projectId' | 'subprojectCode'>
+  Omit<
+    DmsSubproject,
+    'id' | 'projectId' | 'subprojectCode' | 'vesselType' | 'vesselNameUsed'
+  >
 >;
 
 export type RequiredSubprojectKey = Exclude<
   RequiredKeys<DmsSubproject>,
-  'id' | 'projectId' | 'subprojectCode'
+  'id' | 'projectId' | 'subprojectCode' | 'vesselType' | 'vesselNameUsed'
 >;
 
-export const REQUIRED_SUBPROJECT_KEYS = ['title'] as const;
+export const REQUIRED_SUBPROJECT_KEYS = ['title', 'vesselId'] as const;
 
 export const REQUIRED_SUBPROJECT_KEYS_EXHAUSTIVE: AssertEqual<
   RequiredSubprojectKey,

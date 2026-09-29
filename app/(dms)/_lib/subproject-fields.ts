@@ -13,9 +13,11 @@ import type { SectionColour } from './section-colour';
  * from the parent project's code plus a row number.
  */
 
+// `vesselId` is a pick from the defined vessels, rendered by the form itself
+// rather than as a generic field.
 export type SubprojectFieldKey = Exclude<
   keyof DmsSubproject,
-  'id' | 'projectId' | 'subprojectCode'
+  'id' | 'projectId' | 'subprojectCode' | 'vesselId' | 'vesselType' | 'vesselNameUsed'
 >;
 
 export interface SubprojectFieldDef {
@@ -57,14 +59,6 @@ export const SUBPROJECT_FIELDS: readonly SubprojectFieldDef[] = [
   { key: 'subprojectNumber', kind: 'text', label: 'Subproject number', specLabel: 'شماره زیرپروژه', section: 'identity' },
   { key: 'location', kind: 'text', label: 'Location', specLabel: 'موقعیت جغرافیایی', section: 'identity' },
   { key: 'summary', kind: 'longtext', label: 'Summary', specLabel: 'شرح مختصر زیرپروژه', section: 'identity' },
-  /**
-   * ۲-۲ carries the vessel as free TEXT. This is the THIRD place a vessel
-   * appears — ۲-۴ is the authoritative one-to-one and ۲-۷ denormalises it — so
-   * these two are recorded because they are in the schema and are never read
-   * as the link. getProjectVessel is the link.
-   */
-  { key: 'vesselType', kind: 'text', label: 'Vessel type', specLabel: 'نوع شناور', section: 'identity' },
-  { key: 'vesselNameUsed', kind: 'text', label: 'Vessel used', specLabel: 'نام شناور مورد استفاده', section: 'identity' },
   { key: 'initialVolumeM3', kind: 'number', label: 'Initial volume (m³)', specLabel: 'حجم اولیه', section: 'identity' },
   { key: 'finalVolumeM3', kind: 'number', label: 'Final volume (m³)', specLabel: 'حجم نهایی', section: 'identity' },
 

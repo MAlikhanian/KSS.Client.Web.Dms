@@ -17,6 +17,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
 import { createVessel } from '@/lib/dms/mock-store';
 import { useDmsActor } from '../../../_lib/use-dms-actor';
+import { VesselTypeSelect } from '../../../_components/vessel-type-select';
 
 /**
  * A SEED, NOT A FORM — the estate's create-page rule.
@@ -47,7 +48,7 @@ export function CreateVesselContent() {
   const createMutation = useMutation({
     mutationFn: () => {
       if (!actor) throw new Error('No actor');
-      return createVessel({ name, vesselType, actor });
+      return createVessel({ name, vesselType: vesselType || undefined, actor });
     },
     onSuccess: (created) => {
       toast.success(
@@ -136,14 +137,8 @@ export function CreateVesselContent() {
             <label className="text-sm font-medium block" htmlFor="vessel-type">
               {t('vesselType', { defaultValue: 'Vessel type' })}
             </label>
-            <Input
-              id="vessel-type"
-              value={vesselType}
-              onChange={(e) => setVesselType(e.target.value)}
-              placeholder={t('vesselTypePlaceholder', {
-                defaultValue: 'e.g. cutter suction, hopper suction',
-              })}
-            />
+            {/* A pick from the vessel-types lookup, optional as before. */}
+            <VesselTypeSelect id="vessel-type" value={vesselType} onChange={setVesselType} />
           </div>
         </CardContent>
       </Card>

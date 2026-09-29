@@ -10,7 +10,12 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
 import { updateVessel } from '@/lib/dms/mock-store';
 import type { DmsActor, DmsVessel, VesselPatch } from '@/lib/dms/types';
-import { parseOptionalNumber, toEnglishDigits } from '../../../../_lib/digits';
+import {
+  parseOptionalNumber,
+  toEnglishDigits,
+  toPersianDigits,
+} from '../../../../_lib/digits';
+import { VesselTypeSelect } from '../../../../_components/vessel-type-select';
 import {
   VESSEL_FIELDS,
   VESSEL_FIELD_GROUPS,
@@ -162,6 +167,19 @@ function FieldInput({
   onChange: (value: string) => void;
 }) {
   const { t } = useTranslation('dms');
+  // Build and refit years are JALALI years; typed with either keyboard's digits
+  // and shown in Persian digits, stored as a number.
+  const jalaliYear = field.key === 'buildYear' || field.key === 'refitYear';
+  if (field.key === 'vesselType') {
+    return (
+      <div className="space-y-1.5">
+        <label className="text-sm font-medium block" htmlFor={`vessel-${field.key}`}>
+          {t(`vesselField_${field.key}`, { defaultValue: field.label })}
+        </label>
+        <VesselTypeSelect id={`vessel-${field.key}`} value={value} onChange={onChange} />
+      </div>
+    );
+  }
   return (
     <div className="space-y-1.5">
       <label className="text-sm font-medium block" htmlFor={`vessel-${field.key}`}>
@@ -169,8 +187,9 @@ function FieldInput({
       </label>
       <Input
         id={`vessel-${field.key}`}
-        value={value}
-        inputMode={field.kind === 'number' ? 'decimal' : undefined}
+        value={jalaliYear ? toPersianDigits(value) : value}
+        placeholder={jalaliYear ? '۱۴۰۰' : undefined}
+        inputMode={field.kind === 'number' ? (jalaliYear ? 'numeric' : 'decimal') : undefined}
         onChange={(e) =>
           onChange(
             // Normalised on the way in, so a Persian-keyboard '۱۹۹۸' does not

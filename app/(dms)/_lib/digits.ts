@@ -13,6 +13,11 @@
 const PERSIAN_ZERO = 0x06f0;
 const ARABIC_ZERO = 0x0660;
 
+/** ASCII digits to Persian, for display. The inverse of toEnglishDigits. */
+export function toPersianDigits(value: string): string {
+  return value.replace(/[0-9]/g, (d) => String.fromCharCode(PERSIAN_ZERO + Number(d)));
+}
+
 export function toEnglishDigits(value: string): string {
   return value.replace(/[۰-۹٠-٩]/g, (ch) => {
     const code = ch.charCodeAt(0);

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { DmsDateInput } from '../../../../_components/dms-date-input';
+import { VesselSelect } from '../../../../_components/vessel-select';
 import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
@@ -47,13 +48,22 @@ export function SubprojectForm({
     initialValues(subproject),
   );
 
+  // The linked vessel — REQUIRED. A subproject stored before the link existed
+  // has none, and cannot be saved until one is picked.
+  const [vesselId, setVesselId] = useState(subproject.vesselId ?? '');
+
   useEffect(() => {
     setValues(initialValues(subproject));
+    setVesselId(subproject.vesselId ?? '');
   }, [subproject]);
 
   const saveMutation = useMutation({
     mutationFn: () =>
-      updateSubproject({ id: subproject.id, patch: toPatch(values), actor }),
+      updateSubproject({
+        id: subproject.id,
+        patch: { ...toPatch(values), vesselId },
+        actor,
+      }),
     onSuccess: (saved) => {
       toast.success(t('subprojectSaved', { defaultValue: 'Subproject saved' }));
       queryClient.setQueryData(['dms', 'subproject', subproject.id], saved);
@@ -109,6 +119,15 @@ export function SubprojectForm({
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {section.id === 'identity' && (
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium block" htmlFor="subproject-vesselId">
+                        {t('vessel', { defaultValue: 'Vessel' })}{' '}
+                        <span className="text-destructive">*</span>
+                      </label>
+                      <VesselSelect id="subproject-vesselId" value={vesselId} onChange={setVesselId} />
+                    </div>
+                  )}
                   {SUBPROJECT_FIELDS.filter(
                     (f) => f.section === section.id,
                   ).map((field) => (
@@ -132,21 +151,24 @@ export function SubprojectForm({
             <CardContent className="py-4 flex items-center gap-2">
               <Button
                 variant="primary"
-                disabled={saveMutation.isPending || missingRequired.length > 0}
+                disabled={
+                  saveMutation.isPending || missingRequired.length > 0 || vesselId === ''
+                }
                 onClick={() => saveMutation.mutate()}
               >
                 {saveMutation.isPending
                   ? t('saving', { defaultValue: 'Saving…' })
                   : t('save', { defaultValue: 'Save' })}
               </Button>
-              {missingRequired.length > 0 && (
+              {(missingRequired.length > 0 || vesselId === '') && (
                 <span className="text-sm text-destructive">
                   {t('requiredFieldsMissing', { defaultValue: 'Required:' })}{' '}
-                  {missingRequired
-                    .map((f) =>
+                  {[
+                    ...missingRequired.map((f) =>
                       t(`subprojectField_${f.key}`, { defaultValue: f.label }),
-                    )
-                    .join(', ')}
+                    ),
+                    ...(vesselId === '' ? [t('vessel', { defaultValue: 'Vessel' })] : []),
+                  ].join(', ')}
                 </span>
               )}
             </CardContent>

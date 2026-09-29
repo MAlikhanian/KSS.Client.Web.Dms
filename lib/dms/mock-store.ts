@@ -48,6 +48,7 @@ import type {
   DmsSubproject,
   DmsVessel,
   DmsVesselAssignment,
+  DmsVesselType,
   EntityRef,
   CyclePatch,
   ProjectPatch,
@@ -97,6 +98,7 @@ const KEY_STOPPAGES = 'dms:stoppages';
 /** What the one-time §5 dashboard backfill did — see backfillDashboardSeed. */
 const KEY_BACKFILL_DASHBOARD = 'dms:backfill:dashboard-v1';
 const KEY_STOPPAGE_TYPES = 'dms:stoppage-types';
+const KEY_VESSEL_TYPES = 'dms:vessel-types';
 
 /**
  * Constant latency on every call. Present so loading and skeleton states get
@@ -182,26 +184,34 @@ function nowIso(): string {
 // rather than invented, because a plausible contract figure in a mock is
 // indistinguishable from a real one a hop later.
 
+/** The four types the customer named, with the codes the database seeds. */
+const SEED_VESSEL_TYPES: DmsVesselType[] = [
+  { id: 'dms-vtp-1', code: 'HOPPER_SUCTION', name: 'هاپر ساکشن', nameEn: 'Hopper Suction', sortOrder: 1, isActive: true },
+  { id: 'dms-vtp-2', code: 'CUTTER_SUCTION', name: 'کاتر ساکشن', nameEn: 'Cutter Suction', sortOrder: 2, isActive: true },
+  { id: 'dms-vtp-3', code: 'MULTICAT', name: 'مولتی‌کت', nameEn: 'Multicat', sortOrder: 3, isActive: true },
+  { id: 'dms-vtp-4', code: 'SPLIT_BARGE', name: 'اسپلیت بارج', nameEn: 'Split Barge', sortOrder: 4, isActive: true },
+];
+
 const SEED_VESSELS: DmsVessel[] = [
   {
     id: 'dms-vsl-1',
-    vesselCode: 'KRZ-01',
+    vesselCode: 'VSL-01',
     name: 'کاریز ۱',
-    vesselType: 'کاترساکشن',
+    vesselType: 'CUTTER_SUCTION',
     actualDailyCapacityM3: 4500,
   },
   {
     id: 'dms-vsl-2',
-    vesselCode: 'KRZ-02',
+    vesselCode: 'VSL-02',
     name: 'کاریز ۲',
-    vesselType: 'هاپرساکشن',
+    vesselType: 'HOPPER_SUCTION',
     actualDailyCapacityM3: 6200,
   },
   {
     id: 'dms-vsl-3',
-    vesselCode: 'KRZ-03',
+    vesselCode: 'VSL-03',
     name: 'کاریز ۳',
-    vesselType: 'کاترساکشن',
+    vesselType: 'CUTTER_SUCTION',
     actualDailyCapacityM3: 3800,
   },
 ];
@@ -311,6 +321,7 @@ const SEED_SUBPROJECTS: DmsSubproject[] = [
     projectId: 'dms-prj-1',
     subprojectCode: 'PRJ-1401-A-01',
     title: 'فاز یک — حوضچه شمالی',
+    vesselId: 'dms-vsl-1',
     initialVolumeM3: 150000,
   },
   {
@@ -318,6 +329,7 @@ const SEED_SUBPROJECTS: DmsSubproject[] = [
     projectId: 'dms-prj-1',
     subprojectCode: 'PRJ-1401-A-02',
     title: 'فاز دو — حوضچه جنوبی',
+    vesselId: 'dms-vsl-1',
     initialVolumeM3: 100000,
   },
 ];
@@ -828,6 +840,7 @@ function ensureSeed(): void {
   // what dms:seed-version=2 covered — so a browser that migrated off the old
   // scheme still receives this one. That is the frozen list working.
   seedIfNeverSeeded('stoppage-types', KEY_STOPPAGE_TYPES, SEED_STOPPAGE_TYPES);
+  seedIfNeverSeeded('vessel-types', KEY_VESSEL_TYPES, SEED_VESSEL_TYPES);
   seedCheckedThisLoad = true;
 }
 
@@ -1092,8 +1105,54 @@ export async function getVessel({ id }: EntityRef): Promise<DmsVessel> {
  * A seed record, per the estate's create-page convention: the few fields
  * needed to exist, then the edit page for the rest.
  */
+export async function listVesselTypes(): Promise<DmsVesselType[]> {
+  return mockRead(() => {
+    ensureSeed();
+    return [...read<DmsVesselType[]>(KEY_VESSEL_TYPES, [])].sort(
+      (a, b) => a.sortOrder - b.sortOrder,
+    );
+  });
+}
+
+/** Refuse a type code that is not an active row of the lookup — the API's 422. */
+function assertVesselType(code: string | undefined): void {
+  if (code === undefined) return;
+  const known = read<DmsVesselType[]>(KEY_VESSEL_TYPES, []).some(
+    (t) => t.code === code && t.isActive,
+  );
+  if (!known) {
+    throw validation(`Unknown vessel type '${code}'.`, { vesselType: 'unknown' });
+  }
+}
+
+/**
+ * Build and refit years are JALALI years in 1300–1500, and a refit cannot
+ * precede the build — the same constraint the database carries, so the mock
+ * refuses what the API will refuse.
+ */
+function assertVesselYears(buildYear?: number, refitYear?: number): void {
+  const details: Record<string, string> = {};
+  const bad = (y?: number) =>
+    y !== undefined && (!Number.isInteger(y) || y < 1300 || y > 1500);
+  if (bad(buildYear)) details.buildYear = 'must be a Jalali year 1300-1500';
+  if (bad(refitYear)) details.refitYear = 'must be a Jalali year 1300-1500';
+  if (
+    !details.buildYear &&
+    !details.refitYear &&
+    buildYear !== undefined &&
+    refitYear !== undefined &&
+    refitYear < buildYear
+  ) {
+    details.refitYear = 'cannot be before the build year';
+  }
+  if (Object.keys(details).length > 0) {
+    throw validation('The vessel years are not valid.', details);
+  }
+}
+
 export async function createVessel(args: {
   name: string;
+  /** A vessel-type CODE from listVesselTypes, or absent. */
   vesselType?: string;
   actor: DmsActor;
 }): Promise<DmsVessel> {
@@ -1109,12 +1168,14 @@ export async function createVessel(args: {
     }
 
     ensureSeed();
+    const vesselType = args.vesselType?.trim() || undefined;
+    assertVesselType(vesselType);
     const all = read<DmsVessel[]>(KEY_VESSELS, []);
     const created: DmsVessel = {
       id: uuid(),
       vesselCode: nextVesselCode(all),
       name,
-      vesselType: args.vesselType?.trim() || undefined,
+      vesselType,
     };
     write(KEY_VESSELS, [...all, created]);
     return created;
@@ -1143,8 +1204,12 @@ export async function updateVessel(args: {
     if (!existing) throw notFound('Vessel', args.id);
 
     assertRequiredNotBlanked('Vessel', args.patch, REQUIRED_VESSEL_KEYS);
+    // Checked only when the patch sets it: a free-text value from an older
+    // store is left alone until somebody picks a type.
+    if (args.patch.vesselType !== undefined) assertVesselType(args.patch.vesselType);
 
     const next: DmsVessel = { ...existing, ...args.patch };
+    assertVesselYears(next.buildYear, next.refitYear);
     write(
       KEY_VESSELS,
       all.map((v) => (v.id === args.id ? next : v)),
@@ -1153,13 +1218,17 @@ export async function updateVessel(args: {
   });
 }
 
-/** ۲-۳'s auto-generated code. Highest existing number plus one, never reused. */
+/**
+ * ۲-۳'s auto-generated code, in the API's form `VSL-NN`. Highest existing
+ * number plus one, never reused. The older `KRZ-NN` form is still counted so a
+ * store written before the change does not reissue a number.
+ */
 function nextVesselCode(all: DmsVessel[]): string {
   const highest = all.reduce((max, v) => {
-    const match = /^KRZ-(\d+)$/.exec(v.vesselCode);
+    const match = /^(?:VSL|KRZ)-(\d+)$/.exec(v.vesselCode);
     return match ? Math.max(max, Number(match[1])) : max;
   }, 0);
-  return `KRZ-${String(highest + 1).padStart(2, '0')}`;
+  return `VSL-${String(highest + 1).padStart(2, '0')}`;
 }
 
 /**
@@ -1296,9 +1365,9 @@ export async function listSubprojects(
 ): Promise<DmsSubproject[]> {
   return mockRead(() => {
     assertProjectAvailable(query.projectId);
-    const rows = read<DmsSubproject[]>(KEY_SUBPROJECTS, []).filter(
-      (s) => s.projectId === query.projectId,
-    );
+    const rows = read<DmsSubproject[]>(KEY_SUBPROJECTS, [])
+      .filter((s) => s.projectId === query.projectId)
+      .map(withVesselOutputs);
     const q = query.query?.trim();
     if (!q) return rows;
     return rows.filter(
@@ -1316,7 +1385,7 @@ export async function getSubproject({
       (s) => s.id === id,
     );
     if (!row) throw notFound('Subproject', id);
-    return row;
+    return withVesselOutputs(row);
   });
 }
 
@@ -1333,6 +1402,8 @@ export async function getSubproject({
 export async function createSubproject(args: {
   projectId: string;
   title: string;
+  /** REQUIRED: one of the defined vessels. */
+  vesselId: string;
   actor: DmsActor;
 }): Promise<DmsSubproject> {
   return mockWrite(() => {
@@ -1343,11 +1414,14 @@ export async function createSubproject(args: {
     }
     const project = assertProjectAvailable(args.projectId);
     const title = args.title.trim();
-    if (title.length === 0) {
-      throw validation('A subproject title is required.', {
-        title: 'required',
-      });
+    const vesselId = args.vesselId.trim();
+    const missing: Record<string, string> = {};
+    if (title.length === 0) missing.title = 'required';
+    if (vesselId.length === 0) missing.vesselId = 'required';
+    if (Object.keys(missing).length > 0) {
+      throw validation('A subproject needs a title and a vessel.', missing);
     }
+    assertVesselExists(vesselId);
 
     const all = read<DmsSubproject[]>(KEY_SUBPROJECTS, []);
     const created: DmsSubproject = {
@@ -1355,9 +1429,10 @@ export async function createSubproject(args: {
       projectId: args.projectId,
       subprojectCode: nextSubprojectCode(project.projectCode, all, args.projectId),
       title,
+      vesselId,
     };
     write(KEY_SUBPROJECTS, [...all, created]);
-    return created;
+    return withVesselOutputs(created);
   });
 }
 
@@ -1378,14 +1453,47 @@ export async function updateSubproject(args: {
     if (!existing) throw notFound('Subproject', args.id);
 
     assertRequiredNotBlanked('Subproject', args.patch, REQUIRED_SUBPROJECT_KEYS);
+    if (args.patch.vesselId !== undefined) assertVesselExists(args.patch.vesselId);
 
-    const next: DmsSubproject = { ...existing, ...args.patch };
+    const next: DmsSubproject = { ...stripVesselOutputs(existing), ...args.patch };
     write(
       KEY_SUBPROJECTS,
       all.map((s) => (s.id === args.id ? next : s)),
     );
-    return next;
+    return withVesselOutputs(next);
   });
+}
+
+/**
+ * The API returns the linked vessel's type code and name on every subproject,
+ * as read-only outputs. Derived at READ time, never stored, so they cannot go
+ * stale when the vessel is renamed or retyped.
+ */
+function withVesselOutputs(row: DmsSubproject): DmsSubproject {
+  const base = stripVesselOutputs(row);
+  const vessel = read<DmsVessel[]>(KEY_VESSELS, []).find((v) => v.id === row.vesselId);
+  if (!vessel) return base;
+  return {
+    ...base,
+    ...(vessel.vesselType !== undefined ? { vesselType: vessel.vesselType } : {}),
+    vesselNameUsed: vessel.name,
+  };
+}
+
+/** Drops the outputs, including free text an older store may still hold. */
+function stripVesselOutputs(row: DmsSubproject): DmsSubproject {
+  const { vesselType: _type, vesselNameUsed: _name, ...rest } = row;
+  void _type;
+  void _name;
+  return rest;
+}
+
+/** A link to a vessel must name a defined one. */
+function assertVesselExists(vesselId: string): void {
+  ensureSeed();
+  if (!read<DmsVessel[]>(KEY_VESSELS, []).some((v) => v.id === vesselId)) {
+    throw notFound('Vessel', vesselId);
+  }
 }
 
 /** `<parent project code>-NN`, numbered within that project. */
