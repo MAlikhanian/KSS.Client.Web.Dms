@@ -27,6 +27,7 @@ import type {
   ReportStatus,
 } from '@/lib/dms/types';
 import { StoppageForm, type StoppageDraft } from './stoppage-form';
+import { useRefusalText } from '../_lib/refusal-text';
 
 /**
  * Section 3 — stoppages. Amber.
@@ -110,6 +111,8 @@ export function StoppagesSection({
 
   const describe = (e: unknown) =>
     isDmsError(e) ? `${e.message} (${e.code})` : undefined;
+  // A refused save is shown in words, never as the service's code.
+  const refusalText = useRefusalText();
 
   const editingRow = stoppages.find((row) => row.id === editingId);
 
@@ -173,7 +176,7 @@ export function StoppagesSection({
           <StoppageForm
             reportDate={edit.reportDate}
             isSaving={createMutation.isPending}
-            errorText={describe(createMutation.error)}
+            errorText={refusalText(createMutation.error)}
             onCancel={() => {
               setAdding(false);
               createMutation.reset();
@@ -187,7 +190,7 @@ export function StoppagesSection({
             initial={editingRow}
             reportDate={edit.reportDate}
             isSaving={updateMutation.isPending}
-            errorText={describe(updateMutation.error)}
+            errorText={refusalText(updateMutation.error)}
             onCancel={() => {
               setEditingId(null);
               updateMutation.reset();

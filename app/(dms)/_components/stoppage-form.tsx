@@ -18,7 +18,9 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { listStoppageTypes } from '@/lib/dms/store';
 import { ALL_RESPONSIBLE_PARTIES } from '@/lib/dms/types';
 import type { DmsStoppage, ResponsibleParty } from '@/lib/dms/types';
-import { parseOptionalNumber, toEnglishDigits } from '../_lib/digits';
+import { PERSIAN_DECIMAL_MARK, toEnglishDigits, toPersianDigits } from '../_lib/digits';
+import { readDurationHours } from '../_lib/duration-hours';
+import { readEntryTime } from '../_lib/entry-time';
 
 export type StoppageDraft = Omit<DmsStoppage, 'id' | 'reportId'>;
 
@@ -52,7 +54,7 @@ export function StoppageForm({
   isSaving: boolean;
   errorText?: string;
 }) {
-  const { t } = useTranslation('dms');
+  const { t, i18n } = useTranslation('dms');
 
   const typesQuery = useQuery({
     queryKey: ['dms', 'stoppage-types', ''],
@@ -95,15 +97,27 @@ export function StoppageForm({
     setIsPlanned(chosen.isPlanned);
   }
 
-  const parsedDuration = parseOptionalNumber(durationHours);
+  // Read with the service's own rules, so Save turns on only for what the
+  // service will accept, and each field that cannot be read says so below it.
+  const start = readEntryTime(startTime);
+  const end = readEntryTime(endTime);
+  const duration = readDurationHours(durationHours);
   const isValid =
     stoppageCode.trim().length > 0 &&
     category.trim().length > 0 &&
     stoppageDate.trim().length > 0 &&
-    startTime.trim().length > 0 &&
-    endTime.trim().length > 0 &&
-    parsedDuration !== undefined &&
-    parsedDuration > 0;
+    start.status === 'ok' &&
+    end.status === 'ok' &&
+    duration.status === 'ok';
+
+  // Hours entered as H:MM are shown converted, so the stored value is visible
+  // before saving.
+  const hoursShown =
+    duration.status === 'ok'
+      ? i18n.language === 'en'
+        ? String(duration.hours)
+        : toPersianDigits(String(duration.hours)).split('.').join(PERSIAN_DECIMAL_MARK)
+      : '';
 
   return (
     <div className="rounded-lg border border-border p-4 space-y-4">
@@ -175,8 +189,16 @@ export function StoppageForm({
             id="stp-start"
             value={startTime}
             placeholder="08:30"
+            aria-invalid={start.status === 'invalid' ? true : undefined}
             onChange={(e) => setStartTime(toEnglishDigits(e.target.value))}
           />
+          {start.status === 'invalid' && (
+            <p className="text-xs text-destructive">
+              {t('timeInvalidHint', {
+                defaultValue: 'Enter the time as hours:minutes, for example 08:30 (hours 0–23, minutes 00–59).',
+              })}
+            </p>
+          )}
         </div>
 
         <div className="space-y-1.5">
@@ -188,8 +210,16 @@ export function StoppageForm({
             id="stp-end"
             value={endTime}
             placeholder="10:00"
+            aria-invalid={end.status === 'invalid' ? true : undefined}
             onChange={(e) => setEndTime(toEnglishDigits(e.target.value))}
           />
+          {end.status === 'invalid' && (
+            <p className="text-xs text-destructive">
+              {t('timeInvalidHint', {
+                defaultValue: 'Enter the time as hours:minutes, for example 08:30 (hours 0–23, minutes 00–59).',
+              })}
+            </p>
+          )}
         </div>
 
         <div className="space-y-1.5">
@@ -197,15 +227,41 @@ export function StoppageForm({
             {t('durationHours', { defaultValue: 'Duration (hours)' })}{' '}
             <span className="text-destructive">*</span>
           </label>
-          {/* ۲-۹ gives this in HOURS and stores it that way. It is entered, not
-              derived from the two times — the FRD carries both, and deriving
-              one would silently overwrite what the operator recorded. */}
+          {/* The duration is given in HOURS and stored that way, typed as a
+              decimal or as H:MM. It is entered, not derived from the two
+              times: the specification records both, and deriving one would
+              silently overwrite what the operator recorded. */}
           <Input
             id="stp-duration"
             inputMode="decimal"
             value={durationHours}
+            aria-invalid={duration.status === 'unreadable' ? true : undefined}
             onChange={(e) => setDurationHours(toEnglishDigits(e.target.value))}
           />
+          {duration.status === 'ok' ? (
+            duration.fromClock && (
+              <p className="text-xs text-muted-foreground">
+                {t('durationHoursFromClock', {
+                  defaultValue: '= {{hours}} h',
+                  hours: hoursShown,
+                })}
+              </p>
+            )
+          ) : (
+            // Shown whenever the duration cannot be saved — empty or unreadable
+            // — so Save is never grey without a reason on the page.
+            <p
+              className={
+                duration.status === 'unreadable'
+                  ? 'text-xs text-destructive'
+                  : 'text-xs text-muted-foreground'
+              }
+            >
+              {t('durationHoursHint', {
+                defaultValue: 'Enter the duration in hours, for example 0.92 or 00:55.',
+              })}
+            </p>
+          )}
         </div>
 
         <div className="space-y-1.5">
@@ -282,21 +338,22 @@ export function StoppageForm({
         <Button
           variant="primary"
           disabled={!isValid || isSaving}
-          onClick={() =>
+          onClick={() => {
+            if (!isValid || start.status !== 'ok' || end.status !== 'ok' || duration.status !== 'ok') return;
             onSubmit({
               stoppageDate,
               stoppageCode,
               category,
-              startTime,
-              endTime,
-              durationHours: parsedDuration as number,
+              startTime: start.value,
+              endTime: end.value,
+              durationHours: duration.hours,
               isPlanned,
               rootCauseSystem: rootCauseSystem.trim() || undefined,
               notes: notes.trim() || undefined,
               responsibleParty:
                 (responsibleParty as ResponsibleParty) || undefined,
-            })
-          }
+            });
+          }}
         >
           {isSaving
             ? t('saving', { defaultValue: 'Saving…' })

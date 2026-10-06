@@ -23,6 +23,7 @@ import { minutesBetween } from '@/lib/dms/kpi';
 import { createCycle, deleteCycle, updateCycle } from '@/lib/dms/store';
 import type { DmsActor, DmsCycle, ReportStatus } from '@/lib/dms/types';
 import { CycleForm, type CycleDraft } from './cycle-form';
+import { useRefusalText } from '../_lib/refusal-text';
 import { formatMinutes } from '../_lib/report-status';
 
 /**
@@ -101,6 +102,8 @@ export function CyclesSection({
 
   const describe = (e: unknown) =>
     isDmsError(e) ? `${(e as { message: string }).message} (${(e as { code: string }).code})` : undefined;
+  // A refused save is shown in words, never as the service's code.
+  const refusalText = useRefusalText();
 
   const editingRow = cycles.find((c) => c.id === editingId);
 
@@ -146,7 +149,7 @@ export function CyclesSection({
           <CycleForm
             reportDate={edit.reportDate}
             isSaving={createMutation.isPending}
-            errorText={describe(createMutation.error)}
+            errorText={refusalText(createMutation.error)}
             onCancel={() => {
               setAdding(false);
               createMutation.reset();
@@ -160,7 +163,7 @@ export function CyclesSection({
             initial={editingRow}
             reportDate={edit.reportDate}
             isSaving={updateMutation.isPending}
-            errorText={describe(updateMutation.error)}
+            errorText={refusalText(updateMutation.error)}
             onCancel={() => {
               setEditingId(null);
               updateMutation.reset();

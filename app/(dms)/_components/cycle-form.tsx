@@ -8,8 +8,22 @@ import { Textarea } from '@/components/ui/textarea';
 import { useTranslation } from '@/hooks/useTranslation';
 import { minutesBetween } from '@/lib/dms/kpi';
 import type { DmsCycle } from '@/lib/dms/types';
-import { parseOptionalNumber, toEnglishDigits } from '../_lib/digits';
+import { toEnglishDigits } from '../_lib/digits';
+import { readEntryTime, type TimeReading } from '../_lib/entry-time';
+import { readOptionalAmount } from '../_lib/optional-amount';
 import { formatMinutes } from '../_lib/report-status';
+
+const TIME_FIELDS = [
+  'dredgingStart',
+  'dredgingEnd',
+  'transportStart',
+  'transportEnd',
+  'dischargeStart',
+  'dischargeEnd',
+  'returnStart',
+  'returnEnd',
+] as const;
+type TimeField = (typeof TIME_FIELDS)[number];
 
 export type CycleDraft = Omit<DmsCycle, 'id' | 'reportId' | 'cycleNumber'>;
 
@@ -50,7 +64,7 @@ export function CycleForm({
   const { t } = useTranslation('dms');
 
   const [cycleDate, setCycleDate] = useState(initial?.cycleDate ?? reportDate);
-  const [times, setTimes] = useState<Record<string, string>>({
+  const [times, setTimes] = useState<Record<TimeField, string>>({
     dredgingStart: initial?.dredgingStart ?? '',
     dredgingEnd: initial?.dredgingEnd ?? '',
     transportStart: initial?.transportStart ?? '',
@@ -67,10 +81,10 @@ export function CycleForm({
   );
   const [notes, setNotes] = useState(initial?.notes ?? '');
 
-  const set = (field: string, value: string) =>
+  const set = (field: TimeField, value: string) =>
     setTimes((prev) => ({ ...prev, [field]: toEnglishDigits(value) }));
 
-  const phases: ReadonlyArray<{ label: string; start: string; end: string }> = [
+  const phases: ReadonlyArray<{ label: string; start: TimeField; end: TimeField }> = [
     {
       label: t('phaseDredging', { defaultValue: 'Dredging' }),
       start: 'dredgingStart',
@@ -93,12 +107,25 @@ export function CycleForm({
     },
   ];
 
-  const allTimesPresent = Object.values(times).every(
-    (v) => v.trim().length > 0,
-  );
-  const parsedVolume = parseOptionalNumber(volume);
-  const volumeOk = parsedVolume === undefined || parsedVolume >= 0;
-  const isValid = cycleDate.trim().length > 0 && allTimesPresent && volumeOk;
+  // Each time is read with the service's own rule, so Save turns on only when
+  // all eight will be accepted, and a time that cannot be read says so below
+  // its field. An end before its start is still accepted (see above).
+  const readings = Object.fromEntries(
+    TIME_FIELDS.map((field) => [field, readEntryTime(times[field])]),
+  ) as Record<TimeField, TimeReading>;
+  const allTimesOk = TIME_FIELDS.every((field) => readings[field].status === 'ok');
+  // The volume is optional, so an EMPTY field is fine. Text that cannot be
+  // read as a number is not empty: it keeps Save off and says so, instead of
+  // being saved as "no volume".
+  const volumeReading = readOptionalAmount(volume);
+  const volumeOk = volumeReading.status === 'empty' || volumeReading.status === 'ok';
+  const isValid = cycleDate.trim().length > 0 && allTimesOk && volumeOk;
+
+  /** The value to send: the time as the service will read it (trimmed). */
+  const sent = (field: TimeField): string => {
+    const reading = readings[field];
+    return reading.status === 'ok' ? reading.value : times[field];
+  };
 
   return (
     <div className="rounded-lg border border-border p-4 space-y-4">
@@ -123,18 +150,38 @@ export function CycleForm({
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-2">
-                <Input
-                  aria-label={`${phase.label} start`}
-                  placeholder="06:20"
-                  value={times[phase.start]}
-                  onChange={(e) => set(phase.start, e.target.value)}
-                />
-                <Input
-                  aria-label={`${phase.label} end`}
-                  placeholder="07:35"
-                  value={times[phase.end]}
-                  onChange={(e) => set(phase.end, e.target.value)}
-                />
+                <div className="space-y-1">
+                  <Input
+                    aria-label={`${phase.label} start`}
+                    placeholder="06:20"
+                    value={times[phase.start]}
+                    aria-invalid={readings[phase.start].status === 'invalid' ? true : undefined}
+                    onChange={(e) => set(phase.start, e.target.value)}
+                  />
+                  {readings[phase.start].status === 'invalid' && (
+                    <p className="text-xs text-destructive">
+                      {t('timeInvalidHint', {
+                        defaultValue: 'Enter the time as hours:minutes, for example 08:30 (hours 0–23, minutes 00–59).',
+                      })}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <Input
+                    aria-label={`${phase.label} end`}
+                    placeholder="07:35"
+                    value={times[phase.end]}
+                    aria-invalid={readings[phase.end].status === 'invalid' ? true : undefined}
+                    onChange={(e) => set(phase.end, e.target.value)}
+                  />
+                  {readings[phase.end].status === 'invalid' && (
+                    <p className="text-xs text-destructive">
+                      {t('timeInvalidHint', {
+                        defaultValue: 'Enter the time as hours:minutes, for example 08:30 (hours 0–23, minutes 00–59).',
+                      })}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           );
@@ -150,6 +197,7 @@ export function CycleForm({
             id="cyc-volume"
             inputMode="decimal"
             value={volume}
+            aria-invalid={volumeOk ? undefined : true}
             onChange={(e) => setVolume(toEnglishDigits(e.target.value))}
           />
           <p className="text-xs text-muted-foreground">
@@ -158,7 +206,14 @@ export function CycleForm({
                 'May be zero — a cycle that ran and produced nothing is still a cycle, and its time counts.',
             })}
           </p>
-          {!volumeOk && (
+          {volumeReading.status === 'unreadable' && (
+            <p className="text-xs text-destructive">
+              {t('volumeUnreadable', {
+                defaultValue: 'Enter the volume as a number, for example 1250 or 1250.5, or leave it empty.',
+              })}
+            </p>
+          )}
+          {volumeReading.status === 'negative' && (
             <p className="text-xs text-destructive">
               {t('volumeNegative', { defaultValue: 'Volume cannot be negative.' })}
             </p>
@@ -183,21 +238,22 @@ export function CycleForm({
         <Button
           variant="primary"
           disabled={!isValid || isSaving}
-          onClick={() =>
+          onClick={() => {
+            if (!isValid) return;
             onSubmit({
               cycleDate,
-              dredgingStart: times.dredgingStart,
-              dredgingEnd: times.dredgingEnd,
-              transportStart: times.transportStart,
-              transportEnd: times.transportEnd,
-              dischargeStart: times.dischargeStart,
-              dischargeEnd: times.dischargeEnd,
-              returnStart: times.returnStart,
-              returnEnd: times.returnEnd,
-              dredgedVolumeM3: parsedVolume,
+              dredgingStart: sent('dredgingStart'),
+              dredgingEnd: sent('dredgingEnd'),
+              transportStart: sent('transportStart'),
+              transportEnd: sent('transportEnd'),
+              dischargeStart: sent('dischargeStart'),
+              dischargeEnd: sent('dischargeEnd'),
+              returnStart: sent('returnStart'),
+              returnEnd: sent('returnEnd'),
+              dredgedVolumeM3: volumeReading.status === 'ok' ? volumeReading.value : undefined,
               notes: notes.trim() || undefined,
-            })
-          }
+            });
+          }}
         >
           {isSaving
             ? t('saving', { defaultValue: 'Saving…' })
