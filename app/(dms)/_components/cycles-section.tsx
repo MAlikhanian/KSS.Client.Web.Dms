@@ -17,8 +17,9 @@ import {
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
 // Per-row helper only. `computeIntermediateTotals` is banned in this tree by
-// the zone's eslint config: §4 names five KPIs and defines none of them, so no
-// aggregate reaches a screen until those definitions are settled.
+// the zone's eslint config: the specification's KPI section names five KPIs and
+// defines none of them, so no aggregate reaches a screen until those
+// definitions are settled.
 import { minutesBetween } from '@/lib/dms/kpi';
 import { createCycle, deleteCycle, updateCycle } from '@/lib/dms/store';
 import type { DmsActor, DmsCycle, ReportStatus } from '@/lib/dms/types';
@@ -29,9 +30,10 @@ import { formatMinutes } from '../_lib/report-status';
 /**
  * Section 2 — cycles. Sky.
  *
- * ۲-۸ gives a cycle EIGHT timestamps and no duration column, so each of the
- * four phases is derived. A per-row duration is shown beside the two times it
- * came from, which is arithmetic the reader can check on the same line.
+ * The specification gives a cycle EIGHT timestamps and no duration column, so
+ * each of the four phases is derived. A per-row duration is shown beside the
+ * two times it came from, which is arithmetic the reader can check on the same
+ * line.
  *
  * DELIBERATELY NO COLUMN TOTALS. A column of numbers wants a total, and a
  * total here would be T_OP — an aggregate whose definition is not the open

@@ -32,14 +32,16 @@ import { useRefusalText } from '../_lib/refusal-text';
 /**
  * Section 3 — stoppages. Amber.
  *
- * `durationHours` is ENTERED data — ۲-۹ «مدت توقف | بر حسب ساعت» — so it is
- * shown as the hours it is. It is not converted here: minutes exist only inside
- * kpi.ts, and a second conversion site is exactly how a screen and a total come
- * to disagree by a factor of sixty.
+ * `durationHours` is ENTERED data — the specification's field
+ * «مدت توقف | بر حسب ساعت» — so it is shown as the hours it is. It is not
+ * converted here: minutes exist only inside kpi.ts, and a second conversion
+ * site is exactly how a screen and a total come to disagree by a factor of
+ * sixty.
  *
- * BOTH CLASSIFICATIONS ARE SHOWN, because ۲-۹ carries both and nothing in the
- * schema makes them agree. «دسته‌بندی» is free text constrained by the lookup,
- * and `is_planned` is the separate boolean §4 computes T_PD from.
+ * BOTH CLASSIFICATIONS ARE SHOWN, because the specification carries both and
+ * nothing in the schema makes them agree. «دسته‌بندی» is free text constrained
+ * by the lookup, and `is_planned` is the separate boolean from which the
+ * specification's KPI section computes T_PD.
  *
  * ─── EDITING IS OPTIONAL AND OFF BY DEFAULT ─────────────────────────────────
  * Without the `edit` prop this is a read-only table, which is what the

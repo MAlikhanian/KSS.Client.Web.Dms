@@ -27,17 +27,17 @@ export type StoppageDraft = Omit<DmsStoppage, 'id' | 'reportId'>;
 /**
  * Enter or correct one stoppage.
  *
- * ─── THE TYPE SELECT IS AMIR'S ANSWER 5 & 6 ─────────────────────────────────
+ * ─── THE TYPE SELECT IS A CUSTOMER REQUIREMENT ──────────────────────────────
  * «When users log downtimes in the daily reports, they should only be able to
  * select from the predefined options in this table.» So the code and category
  * are not typed here — they come from the lookup, which is the point of having
  * built it.
  *
- * ⚠ SELECTING A TYPE PREFILLS `isPlanned`; IT DOES NOT BIND IT. §4 computes
- * T_PD from the STOPPAGE ROW's flag, not the lookup's, so the checkbox stays
- * editable and the row keeps whatever it ends up with. The note beside it says
- * so, because a prefill that looks like a derived value is how the two quietly
- * become one.
+ * ⚠ SELECTING A TYPE PREFILLS `isPlanned`; IT DOES NOT BIND IT. The
+ * specification's KPI section computes T_PD from the STOPPAGE ROW's flag, not
+ * the lookup's, so the checkbox stays editable and the row keeps whatever it
+ * ends up with. The note beside it says so, because a prefill that looks like a
+ * derived value is how the two quietly become one.
  */
 export function StoppageForm({
   initial,

@@ -28,14 +28,15 @@ type TimeField = (typeof TIME_FIELDS)[number];
 export type CycleDraft = Omit<DmsCycle, 'id' | 'reportId' | 'cycleNumber'>;
 
 /**
- * Enter or correct one cycle — ۲-۸'s eight timestamps.
+ * Enter or correct one cycle — the eight timestamps the specification gives it.
  *
- * The four phases are laid out as pairs because that is what they are: §4 sums
- * dredging + transport + discharge + return into T_OP, and each pair's derived
- * duration is shown beside the two times it comes from. That is the same rule
- * as the cycles table — a per-row derived value is checkable against its own
- * inputs on the spot — and it gives the operator immediate feedback that a
- * night crossing was read the way they meant.
+ * The four phases are laid out as pairs because that is what they are: the
+ * specification's KPI section sums dredging + transport + discharge + return
+ * into T_OP, and each pair's derived duration is shown beside the two times it
+ * comes from. That is the same rule as the cycles table — a per-row derived
+ * value is checkable against its own inputs on the spot — and it gives the
+ * operator immediate feedback that a night crossing was read the way they
+ * meant.
  *
  * ⚠ NO ORDERING IS ENFORCED BETWEEN PHASES, and an end before its own start is
  * ACCEPTED: `minutesBetween` treats that as a midnight crossing, which is how a
