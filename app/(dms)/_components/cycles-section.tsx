@@ -24,6 +24,7 @@ import { minutesBetween } from '@/lib/dms/kpi';
 import { createCycle, deleteCycle, updateCycle } from '@/lib/dms/store';
 import type { DmsActor, DmsCycle, ReportStatus } from '@/lib/dms/types';
 import { CycleForm, type CycleDraft } from './cycle-form';
+import { nextCreateKey } from '../_lib/create-key';
 import { useRefusalText } from '../_lib/refusal-text';
 import { formatMinutes } from '../_lib/report-status';
 
@@ -72,15 +73,22 @@ export function CyclesSection({
     void queryClient.invalidateQueries({ queryKey: ['dms', 'project-cycles'] });
   };
 
+  // The new cycle's key: one per open Add form, kept on every retry from it,
+  // so a save repeated after a lost reply cannot store the cycle twice.
+  const [createKey, setCreateKey] = useState(() => nextCreateKey(null, { type: 'open' }));
+
   const createMutation = useMutation({
-    mutationFn: (draft: CycleDraft) => {
+    mutationFn: ({ draft, key }: { draft: CycleDraft; key: string }) => {
       if (!edit) throw new Error('Not editable');
-      return createCycle({ reportId: edit.reportId, cycle: draft, actor: edit.actor });
+      return createCycle({ reportId: edit.reportId, cycle: draft, id: key, actor: edit.actor });
     },
     onSuccess: () => {
+      setCreateKey((key) => nextCreateKey(key, { type: 'saved' }));
       setAdding(false);
       invalidate();
     },
+    // The form stays open with what was typed; only the key may change.
+    onError: (error) => setCreateKey((key) => nextCreateKey(key, { type: 'failed', error })),
   });
 
   const updateMutation = useMutation({
@@ -122,7 +130,11 @@ export function CyclesSection({
             <Button
               variant="outline"
               className="ms-auto"
-              onClick={() => setAdding(true)}
+              onClick={() => {
+                // A fresh form gets a fresh key.
+                setCreateKey((key) => nextCreateKey(key, { type: 'open' }));
+                setAdding(true);
+              }}
             >
               {t('addCycle', { defaultValue: 'Add cycle' })}
             </Button>
@@ -156,7 +168,9 @@ export function CyclesSection({
               setAdding(false);
               createMutation.reset();
             }}
-            onSubmit={(draft) => createMutation.mutate(draft)}
+            onSubmit={(draft) =>
+              createMutation.mutate({ draft, key: createKey })
+            }
           />
         )}
 

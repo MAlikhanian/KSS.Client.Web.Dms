@@ -1,5 +1,6 @@
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
+import { isKeyRefusal } from './create-key';
 
 /**
  * A refused save, as readable text: each refused field by its own label with
@@ -92,6 +93,14 @@ export function describeRefusal(error: unknown, t: Translate): string {
   if (!isDmsError(error)) {
     return t('refusalGeneric', {
       defaultValue: 'It could not be saved. Try again; if it happens again, tell support.',
+    });
+  }
+
+  // The new cycle's key was refused (taken elsewhere, or malformed). The form
+  // has already been given a fresh key, so pressing Save again succeeds.
+  if (isKeyRefusal(error)) {
+    return t('refusalCycleIdConflict', {
+      defaultValue: 'It was not saved. Press Save again.',
     });
   }
 

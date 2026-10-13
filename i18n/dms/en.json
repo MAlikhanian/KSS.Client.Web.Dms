@@ -600,5 +600,6 @@
   "refusalUnavailable": "The service could not be reached. Try again in a moment.",
   "refusalValidationGeneric": "Some of the values were not accepted. Check them and try again.",
   "refusalGeneric": "It could not be saved. Try again; if it happens again, tell support.",
-  "volumeUnreadable": "Enter the volume as a number, for example 1250 or 1250.5, or leave it empty."
+  "volumeUnreadable": "Enter the volume as a number, for example 1250 or 1250.5, or leave it empty.",
+  "refusalCycleIdConflict": "It was not saved. Press Save again."
 }

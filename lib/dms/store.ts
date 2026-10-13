@@ -427,12 +427,19 @@ export async function listStoppagesForReport({ reportId }: ReportRef): Promise<D
   return list<DmsStoppage>(`/reports/${seg(reportId)}/stoppages`);
 }
 
+/**
+ * `id`, when given, is the cycle's own id, chosen by the browser (a UUIDv7).
+ * Sending the same id again returns the cycle already stored under it rather
+ * than adding a second one, so a save repeated after a lost reply is safe.
+ */
 export async function createCycle(args: {
   reportId: string;
   cycle: Omit<DmsCycle, 'id' | 'reportId' | 'cycleNumber'>;
+  id?: string;
   actor: DmsActor;
 }): Promise<DmsCycle> {
-  return send<DmsCycle>('POST', `/reports/${seg(args.reportId)}/cycles`, args.cycle);
+  const body = args.id === undefined ? args.cycle : { ...args.cycle, id: args.id };
+  return send<DmsCycle>('POST', `/reports/${seg(args.reportId)}/cycles`, body);
 }
 
 export async function updateCycle(args: { id: string; patch: CyclePatch; actor: DmsActor }): Promise<DmsCycle> {
