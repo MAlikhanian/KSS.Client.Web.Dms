@@ -1,7 +1,8 @@
 'use client';
 
-import { Fragment } from 'react';
+import { Fragment, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Container } from '@/components/common/container';
 import { Toolbar, ToolbarHeading, ToolbarTitle } from '@/components/common/toolbar';
@@ -11,6 +12,7 @@ import { useTranslation } from '@/hooks/useTranslation';
 import { canActAs, resolveDmsAccess } from '@/lib/dms/access';
 import { ALL_DMS_ROLES } from '@/lib/dms/types';
 import type { DmsRole } from '@/lib/dms/types';
+import { homeTarget } from './_lib/home-target';
 
 /**
  * DMS home: the screens the signed-in person's roles open.
@@ -20,6 +22,10 @@ import type { DmsRole } from '@/lib/dms/types';
  * roles Auth gives them, and on each screen in that screen's role. The route
  * guard admits only people with DMS access, so everyone who reaches this page
  * holds at least one role (or full access, which opens all three).
+ *
+ * The dashboard is the DMS home: anyone who may open it is sent there at once,
+ * with a replace, so Back does not return here and loop. Everyone else stays on
+ * this page and its links.
  */
 
 const ROLE_LABEL: Record<DmsRole, { key: string; fallback: string; blurb: string }> = {
@@ -52,6 +58,12 @@ export default function DmsHomePage() {
   const { data: session, status } = useSession();
   const access = resolveDmsAccess({ roles: session?.user?.roles, permissions: session?.user?.permissions });
   const roles = ALL_DMS_ROLES.filter((role) => canActAs(access, role));
+  const router = useRouter();
+  const target = status === 'authenticated' ? homeTarget(access) : null;
+
+  useEffect(() => {
+    if (target) router.replace(target);
+  }, [target, router]);
 
   return (
     <Fragment>
@@ -72,8 +84,8 @@ export default function DmsHomePage() {
                   <CardTitle>{t('homeYourScreens', { defaultValue: 'Your screens' })}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {status === 'loading' ? (
-                    <p className="text-sm text-muted-foreground">
+                  {status === 'loading' || target ? (
+                    <p className="text-sm text-muted-foreground" data-dms-home="redirect-to-dashboard">
                       {t('loading', { defaultValue: 'Loading…' })}
                     </p>
                   ) : roles.length === 0 ? (
