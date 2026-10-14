@@ -27,6 +27,7 @@ import type {
   ReportStatus,
 } from '@/lib/dms/types';
 import { StoppageForm, type StoppageDraft } from './stoppage-form';
+import { hoursAsClock } from '../_lib/duration-hours';
 import { useRefusalText } from '../_lib/refusal-text';
 
 /**
@@ -262,7 +263,8 @@ export function StoppagesSection({
                       <TableCell className="whitespace-nowrap">
                         {s.startTime} → {s.endTime}
                       </TableCell>
-                      <TableCell>{s.durationHours}</TableCell>
+                      {/* Stored as decimal hours; shown as H:MM (0.92 is 00:55). */}
+                      <TableCell>{hoursAsClock(s.durationHours)}</TableCell>
                       <TableCell>{s.responsibleParty ?? '—'}</TableCell>
                       {edit?.canEdit && (
                         <TableCell className="whitespace-nowrap">

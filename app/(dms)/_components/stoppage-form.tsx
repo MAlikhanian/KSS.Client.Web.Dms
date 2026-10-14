@@ -19,6 +19,7 @@ import { listStoppageTypes } from '@/lib/dms/store';
 import { ALL_RESPONSIBLE_PARTIES } from '@/lib/dms/types';
 import type { DmsStoppage, ResponsibleParty } from '@/lib/dms/types';
 import { PERSIAN_DECIMAL_MARK, toEnglishDigits, toPersianDigits } from '../_lib/digits';
+import { durationFieldValue, isTypedDuration } from '../_lib/duration-autofill';
 import { readDurationHours } from '../_lib/duration-hours';
 import { readEntryTime } from '../_lib/entry-time';
 
@@ -73,6 +74,9 @@ export function StoppageForm({
   const [durationHours, setDurationHours] = useState(
     initial ? String(initial.durationHours) : '',
   );
+  // A saved stoppage's duration counts as typed: it is never replaced by one
+  // worked out from the times. A new one follows the times until typed.
+  const [durationTyped, setDurationTyped] = useState(Boolean(initial));
   const [rootCauseSystem, setRootCauseSystem] = useState(
     initial?.rootCauseSystem ?? '',
   );
@@ -101,7 +105,8 @@ export function StoppageForm({
   // service will accept, and each field that cannot be read says so below it.
   const start = readEntryTime(startTime);
   const end = readEntryTime(endTime);
-  const duration = readDurationHours(durationHours);
+  const durationShown = durationFieldValue(durationTyped, durationHours, startTime, endTime);
+  const duration = readDurationHours(durationShown);
   const isValid =
     stoppageCode.trim().length > 0 &&
     category.trim().length > 0 &&
@@ -228,15 +233,20 @@ export function StoppageForm({
             <span className="text-destructive">*</span>
           </label>
           {/* The duration is given in HOURS and stored that way, typed as a
-              decimal or as H:MM. It is entered, not derived from the two
-              times: the specification records both, and deriving one would
-              silently overwrite what the operator recorded. */}
+              decimal or as H:MM. Until the operator types one, it is filled
+              from the start and end times as H:MM; a typed duration is never
+              replaced, and clearing the field hands it back to the times. */}
           <Input
             id="stp-duration"
             inputMode="decimal"
-            value={durationHours}
+            value={durationShown}
+            data-dms-duration={durationTyped ? 'typed' : 'auto-from-times'}
             aria-invalid={duration.status === 'unreadable' ? true : undefined}
-            onChange={(e) => setDurationHours(toEnglishDigits(e.target.value))}
+            onChange={(e) => {
+              const value = toEnglishDigits(e.target.value);
+              setDurationHours(value);
+              setDurationTyped(isTypedDuration(value));
+            }}
           />
           {duration.status === 'ok' ? (
             duration.fromClock && (
