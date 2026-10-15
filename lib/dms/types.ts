@@ -554,6 +554,7 @@ export interface DmsDailyOperationReport {
   vesselId: string; // FRD ۲-۷ vessel_id — PARSED (FK Vessels.id; derived on write, never caller-supplied)
   reportDate: string; // FRD ۲-۷ report_date — PARSED (DATE)
   registeredBy: string; // FRD ۲-۷ registered_by — PARSED (FK Users.id — «شناسه اپراتور ثبت‌کننده»)
+  registeredByName?: string | null; // PROPOSED — the service's display name for registeredBy; null when it has none
   approvedBy?: string; // FRD ۲-۷ approved_by — PARSED (FK Users.id — «شناسه سرپرست تاییدکننده»)
   approvalStatus: ReportStatus; // FRD ۲-۷ approval_status — PARSED (VARCHAR(30))
   /**

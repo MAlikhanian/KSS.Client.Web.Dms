@@ -97,6 +97,7 @@
   "vessel": "Vessel",
   "vesselUnavailable": "Unavailable",
   "registeredBy": "Registered by",
+  "registeredByUnknown": "Unknown",
   "dailyNotes": "Daily notes",
   "notesSaveFailed": "The notes could not be saved.",
   "saveNotes": "Save notes",

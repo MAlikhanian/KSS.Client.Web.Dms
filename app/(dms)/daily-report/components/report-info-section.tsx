@@ -13,6 +13,7 @@ import { getProjectVessel, updateReport } from '@/lib/dms/store';
 import type { DmsActor, DmsDailyOperationReport } from '@/lib/dms/types';
 import { STATUS_BADGE } from '../../_lib/report-status';
 import { formatJalaliDate } from '../../_lib/jalali-date';
+import { registeredByShown } from '../../_lib/registered-by';
 
 /** Section 1 — base info (flat fields). Blue, per the estate's kind→colour table. */
 export function ReportInfoSection({
@@ -93,7 +94,10 @@ export function ReportInfoSection({
           />
           <Field
             label={t('registeredBy', { defaultValue: 'Registered by' })}
-            value={report.registeredBy}
+            value={registeredByShown(
+              report,
+              t('registeredByUnknown', { defaultValue: 'Unknown' }),
+            )}
           />
           {edit?.canEdit ? (
             <div className="md:col-span-2 space-y-2">

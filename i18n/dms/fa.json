@@ -97,6 +97,7 @@
   "vessel": "شناور",
   "vesselUnavailable": "در دسترس نیست",
   "registeredBy": "ثبت‌کننده",
+  "registeredByUnknown": "نامشخص",
   "dailyNotes": "توضیحات روزانه",
   "notesSaveFailed": "توضیحات ذخیره نشد.",
   "saveNotes": "ذخیره توضیحات",
