@@ -22,6 +22,7 @@ import { PERSIAN_DECIMAL_MARK, toEnglishDigits, toPersianDigits } from '../_lib/
 import { durationFieldValue, isTypedDuration } from '../_lib/duration-autofill';
 import { readDurationHours } from '../_lib/duration-hours';
 import { readEntryTime } from '../_lib/entry-time';
+import { carriedRootCause } from '../_lib/root-cause-carry';
 
 export type StoppageDraft = Omit<DmsStoppage, 'id' | 'reportId'>;
 
@@ -77,9 +78,6 @@ export function StoppageForm({
   // A saved stoppage's duration counts as typed: it is never replaced by one
   // worked out from the times. A new one follows the times until typed.
   const [durationTyped, setDurationTyped] = useState(Boolean(initial));
-  const [rootCauseSystem, setRootCauseSystem] = useState(
-    initial?.rootCauseSystem ?? '',
-  );
   const [notes, setNotes] = useState(initial?.notes ?? '');
   const [responsibleParty, setResponsibleParty] = useState<string>(
     initial?.responsibleParty ?? '',
@@ -125,7 +123,10 @@ export function StoppageForm({
       : '';
 
   return (
-    <div className="rounded-lg border border-border p-4 space-y-4">
+    <div
+      className="rounded-lg border border-border p-4 space-y-4"
+      data-dms-root-cause="root-cause-carried"
+    >
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         <div className="space-y-1.5">
           <label className="text-sm font-medium block" htmlFor="stp-type">
@@ -299,17 +300,6 @@ export function StoppageForm({
           </Select>
         </div>
 
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium block" htmlFor="stp-system">
-            {t('rootCauseSystem', { defaultValue: 'System / area' })}
-          </label>
-          <Input
-            id="stp-system"
-            value={rootCauseSystem}
-            onChange={(e) => setRootCauseSystem(e.target.value)}
-          />
-        </div>
-
         <div className="flex items-start gap-2 pt-6">
           <Checkbox
             id="stp-planned"
@@ -358,7 +348,8 @@ export function StoppageForm({
               endTime: end.value,
               durationHours: duration.hours,
               isPlanned,
-              rootCauseSystem: rootCauseSystem.trim() || undefined,
+              // Not entered on this form; a stored value is sent back as it was.
+              ...carriedRootCause(initial),
               notes: notes.trim() || undefined,
               responsibleParty:
                 (responsibleParty as ResponsibleParty) || undefined,
