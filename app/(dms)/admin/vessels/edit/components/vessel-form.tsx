@@ -21,6 +21,12 @@ import {
   VESSEL_FIELD_GROUPS,
   type VesselFieldDef,
 } from '../../../../_lib/vessel-fields';
+import {
+  fieldsForType,
+  hasTypeForm,
+  hiddenStoredValues,
+  typeTitleFa,
+} from '../../../../_lib/vessel-type-fields';
 
 /**
  * ۲-۳'s specification, as ONE section.
@@ -40,7 +46,7 @@ export function VesselForm({
   vessel: DmsVessel;
   actor: DmsActor;
 }) {
-  const { t } = useTranslation('dms');
+  const { t, i18n } = useTranslation('dms');
   const queryClient = useQueryClient();
 
   // Form state is strings: a number input that has been cleared is '' rather
@@ -53,8 +59,14 @@ export function VesselForm({
     setValues(initialValues(vessel));
   }, [vessel]);
 
+  // The fields this vessel's type shows, in the customer's order; every field
+  // for a vessel with no type, or a type with no form of its own.
+  const shown = fieldsForType(values.vesselType);
+  const typeForm = hasTypeForm(values.vesselType);
+
   const saveMutation = useMutation({
-    mutationFn: () => updateVessel({ id: vessel.id, patch: toPatch(values), actor }),
+    mutationFn: () =>
+      updateVessel({ id: vessel.id, patch: toPatch(values, shown, vessel), actor }),
     onSuccess: (saved) => {
       toast.success(t('vesselSaved', { defaultValue: 'Vessel saved' }));
       queryClient.setQueryData(['dms', 'vessel', vessel.id], saved);
@@ -71,12 +83,13 @@ export function VesselForm({
 
   // Every non-optional column on DmsVessel — see toPatch for why an empty
   // required field must not reach the store.
-  const missingRequired = VESSEL_FIELDS.filter(
+  const missingRequired = shown.filter(
     (f) => f.required && (values[f.key] ?? '').trim().length === 0,
   );
 
   return (
     <div
+      data-dms-vessel-form={typeForm ? 'vessel-form-by-type' : 'vessel-form-all-fields'}
       className={
         '[&_div.rounded-xl.bg-card]:bg-blue-50! ' +
         '[&_div.rounded-xl.bg-card]:border-blue-100! ' +
@@ -103,16 +116,19 @@ export function VesselForm({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {VESSEL_FIELD_GROUPS.map((group) => (
+              {VESSEL_FIELD_GROUPS.filter((group) =>
+                shown.some((f) => f.group === group.id),
+              ).map((group) => (
                 <div key={group.id} className="space-y-3">
                   <h3 className="text-sm font-semibold text-muted-foreground">
                     {t(`vesselGroup_${group.id}`, { defaultValue: group.label })}
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                    {VESSEL_FIELDS.filter((f) => f.group === group.id).map((field) => (
+                    {shown.filter((f) => f.group === group.id).map((field) => (
                       <FieldInput
                         key={field.key}
                         field={field}
+                        title={typeForm && i18n.language !== 'en' ? typeTitleFa(values.vesselType, field.key) : undefined}
                         value={values[field.key] ?? ''}
                         onChange={(v) =>
                           setValues((prev) => ({ ...prev, [field.key]: v }))
@@ -159,10 +175,13 @@ export function VesselForm({
 
 function FieldInput({
   field,
+  title,
   value,
   onChange,
 }: {
   field: VesselFieldDef;
+  /** His title on a typed form; otherwise the shared label. */
+  title?: string;
   value: string;
   onChange: (value: string) => void;
 }) {
@@ -174,7 +193,7 @@ function FieldInput({
     return (
       <div className="space-y-1.5">
         <label className="text-sm font-medium block" htmlFor={`vessel-${field.key}`}>
-          {t(`vesselField_${field.key}`, { defaultValue: field.label })}
+          {title ?? t(`vesselField_${field.key}`, { defaultValue: field.label })}
         </label>
         <VesselTypeSelect id={`vessel-${field.key}`} value={value} onChange={onChange} />
       </div>
@@ -183,7 +202,7 @@ function FieldInput({
   return (
     <div className="space-y-1.5">
       <label className="text-sm font-medium block" htmlFor={`vessel-${field.key}`}>
-        {t(`vesselField_${field.key}`, { defaultValue: field.label })}
+        {title ?? t(`vesselField_${field.key}`, { defaultValue: field.label })}
       </label>
       <Input
         id={`vessel-${field.key}`}
@@ -216,10 +235,15 @@ function initialValues(vessel: DmsVessel): Record<string, string> {
 /**
  * Only fields the user actually filled are sent. A cleared number becomes
  * `undefined` — absent — rather than 0, which would be a measurement.
+ * Fields the type's form does not show are sent back as they were stored.
  */
-function toPatch(values: Record<string, string>): VesselPatch {
+function toPatch(
+  values: Record<string, string>,
+  shown: readonly VesselFieldDef[],
+  vessel: DmsVessel,
+): VesselPatch {
   const patch: Record<string, string | number | undefined> = {};
-  for (const field of VESSEL_FIELDS) {
+  for (const field of shown) {
     const raw = values[field.key] ?? '';
     if (field.kind === 'number') {
       patch[field.key] = parseOptionalNumber(raw);
@@ -235,5 +259,6 @@ function toPatch(values: Record<string, string>): VesselPatch {
       delete patch[field.key];
     }
   }
+  Object.assign(patch, hiddenStoredValues(vessel, shown));
   return patch as VesselPatch;
 }

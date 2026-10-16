@@ -39,7 +39,7 @@ export const VESSEL_FIELDS: readonly VesselFieldDef[] = [
   { key: 'model', kind: 'text', label: 'Model', specLabel: 'مدل', group: 'identity' },
 
   { key: 'heightM', kind: 'number', label: 'Height (m)', specLabel: 'ارتفاع', group: 'dimensions' },
-  { key: 'lengthWithLadderM', kind: 'number', label: 'Length with ladder (m)', specLabel: 'طول با نردبان', group: 'dimensions' },
+  { key: 'lengthWithLadderM', kind: 'number', label: 'Ladder length (m)', specLabel: 'طول با نردبان', group: 'dimensions' },
   { key: 'pontoonLengthM', kind: 'number', label: 'Pontoon length (m)', specLabel: 'طول پانتون', group: 'dimensions' },
   { key: 'overallLengthM', kind: 'number', label: 'Overall length (m)', specLabel: 'طول کلی', group: 'dimensions' },
   { key: 'beamM', kind: 'number', label: 'Beam (m)', specLabel: 'عرض', group: 'dimensions' },
@@ -48,7 +48,7 @@ export const VESSEL_FIELDS: readonly VesselFieldDef[] = [
   { key: 'weight', kind: 'number', label: 'Weight (t)', specLabel: 'وزن', group: 'dimensions' },
   { key: 'draftM', kind: 'number', label: 'Draft (m)', specLabel: 'آبخور', group: 'dimensions' },
 
-  { key: 'dredgingDepthM', kind: 'number', label: 'Dredging depth (m)', specLabel: 'عمق لایروبی', group: 'capability' },
+  { key: 'dredgingDepthM', kind: 'number', label: 'Maximum dredging depth (m)', specLabel: 'عمق لایروبی', group: 'capability' },
   { key: 'cutterPowerKw', kind: 'number', label: 'Cutter power (kW)', specLabel: 'توان کاتر', group: 'capability' },
   { key: 'actualDailyCapacityM3', kind: 'number', label: 'Actual daily capacity (m³/day)', specLabel: 'ظرفیت واقعی روزانه', group: 'capability' },
   { key: 'enginePower', kind: 'number', label: 'Engine power (kW)', specLabel: 'توان موتور', group: 'capability' },
