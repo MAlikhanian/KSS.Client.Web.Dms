@@ -168,6 +168,14 @@ export async function updateVessel(args: {
   return send<DmsVessel>('PATCH', `/vessels/${seg(args.id)}`, toPatchBody(args.patch));
 }
 
+/**
+ * Removes a vessel from the list. Refused (409 VESSEL_IN_USE) while any
+ * assignment, subproject or daily report names it; the details say which.
+ */
+export async function deleteVessel(args: { id: string; actor: DmsActor }): Promise<void> {
+  return remove(`/vessels/${seg(args.id)}`);
+}
+
 /** The project's one vessel. Throws NotFound when the project has none. */
 export async function getProjectVessel({ projectId }: ProjectRef): Promise<DmsVessel> {
   return get<DmsVessel>(`/projects/${seg(projectId)}/vessel`);

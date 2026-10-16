@@ -2,13 +2,24 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   Toolbar,
   ToolbarActions,
   ToolbarHeading,
   ToolbarTitle,
 } from '@/components/common/toolbar';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -22,7 +33,9 @@ import {
 } from '@/components/ui/table';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
-import { listVessels } from '@/lib/dms/store';
+import { deleteVessel, listVessels } from '@/lib/dms/store';
+import type { DmsVessel } from '@/lib/dms/types';
+import { describeVesselDeleteRefusal, refreshAfter } from '../../_lib/vessel-delete';
 import { useDmsActor } from '../../_lib/use-dms-actor';
 import { useVesselTypes, vesselTypeLabel } from '../../_components/vessel-type-select';
 
@@ -49,6 +62,26 @@ export function VesselsContent() {
     enabled: ready,
     retry: false,
   });
+
+  // Removal is asked for first, then sent. The service is the guard: it keeps a
+  // vessel that anything uses, and refuses anyone but Project Control.
+  const queryClient = useQueryClient();
+  const [confirming, setConfirming] = useState<DmsVessel | null>(null);
+  const reloadVessels = () => void queryClient.invalidateQueries({ queryKey: ['dms', 'vessels'] });
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => {
+      if (!actor) throw new Error('No actor');
+      return deleteVessel({ id, actor });
+    },
+    onSuccess: () => {
+      toast.success(t('vesselDeleted', { defaultValue: 'Vessel removed' }));
+      reloadVessels();
+    },
+    onError: (error) => {
+      if (refreshAfter(error)) reloadVessels();
+    },
+  });
+  const translate = (key: string, options: { defaultValue: string }) => t(key, options);
 
   if (!ready) {
     return (
@@ -133,6 +166,12 @@ export function VesselsContent() {
               </div>
             )}
 
+            {deleteMutation.isError && (
+              <p className="text-sm text-destructive">
+                {describeVesselDeleteRefusal(deleteMutation.error, translate)}
+              </p>
+            )}
+
             {/* FAILURE PATH TWO — loaded fine, and there is genuinely nothing.
                 Worded differently for "no vessels at all" and "none matched",
                 because they call for different next actions. */}
@@ -170,11 +209,22 @@ export function VesselsContent() {
                         <TableCell>{v.name}</TableCell>
                         <TableCell>{vesselTypeLabel(typesQuery.data, v.vesselType, i18n.language)}</TableCell>
                         <TableCell>{v.actualDailyCapacityM3 ?? '—'}</TableCell>
-                        <TableCell>
+                        <TableCell className="whitespace-nowrap">
                           <Button asChild variant="outline">
                             <Link href={`/admin/vessels/edit?id=${v.id}`}>
                               {t('edit', { defaultValue: 'Edit' })}
                             </Link>
+                          </Button>{' '}
+                          <Button
+                            variant="destructive"
+                            data-dms-vessel-delete="vessel-delete-button"
+                            disabled={deleteMutation.isPending}
+                            onClick={() => {
+                              deleteMutation.reset();
+                              setConfirming(v);
+                            }}
+                          >
+                            {t('remove', { defaultValue: 'Remove' })}
                           </Button>
                         </TableCell>
                       </TableRow>
@@ -186,6 +236,39 @@ export function VesselsContent() {
           </CardContent>
         </Card>
       </div>
+
+      <AlertDialog
+        open={confirming !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirming(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {t('vesselDeleteConfirmTitle', { defaultValue: 'Remove this vessel?' })}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('vesselDeleteConfirmBody', {
+                defaultValue:
+                  'Remove the vessel “{{name}}” ({{code}}) from the vessel list? A vessel that is used anywhere is not removed.',
+                name: confirming?.name ?? '',
+                code: confirming?.vesselCode ?? '',
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('cancel', { defaultValue: 'Cancel' })}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirming) deleteMutation.mutate(confirming.id);
+              }}
+            >
+              {t('remove', { defaultValue: 'Remove' })}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
