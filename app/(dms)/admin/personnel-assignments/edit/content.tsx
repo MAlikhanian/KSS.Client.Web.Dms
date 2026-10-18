@@ -30,7 +30,6 @@ import {
   listShifts,
   updatePersonnelAssignment,
 } from '@/lib/dms/store';
-import { ProjectRoleSelect } from '../../../_components/project-role-select';
 import { useDmsActor } from '../../../_lib/use-dms-actor';
 
 /**
@@ -59,7 +58,6 @@ export function EditPersonnelAssignmentContent() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [shiftId, setShiftId] = useState('');
-  const [roleId, setRoleId] = useState('');
   const [loaded, setLoaded] = useState(false);
 
   const [projectsQuery, personnelQuery, shiftsQuery] = useQueries({
@@ -102,7 +100,6 @@ export function EditPersonnelAssignmentContent() {
       setStartDate(row.startDate);
       setEndDate(row.endDate ?? '');
       setShiftId(row.shiftId ?? '');
-      setRoleId(row.roleId ?? '');
       setLoaded(true);
     }
   }, [row, loaded]);
@@ -118,7 +115,9 @@ export function EditPersonnelAssignmentContent() {
           // `undefined` here means "no end date", which is what open means.
           endDate: endDate === '' ? undefined : endDate,
           shiftId: shiftId === '' ? undefined : shiftId,
-          roleId: roleId === '' ? undefined : roleId,
+          // The role is no longer shown or asked for. It is left out of the
+          // patch, which leaves the stored role as it is; sending it empty
+          // would clear it.
         },
         actor,
       });
@@ -300,13 +299,6 @@ export function EditPersonnelAssignmentContent() {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <Label htmlFor="pa-edit-role">
-                      {t('role', { defaultValue: 'Role' })}
-                    </Label>
-                    <ProjectRoleSelect id="pa-edit-role" value={roleId} onChange={setRoleId} />
                   </div>
                 </div>
 

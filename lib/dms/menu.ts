@@ -247,14 +247,6 @@ export const DMS_MENU_ENTRIES: readonly DmsMenuEntry[] = [
     dmsRoles: ['ProjectControl'],
   },
   {
-    // «نقش‌های پروژه (جدول یا لیست مرجع)» — an editable table: roles are added,
-    // renamed, reordered and deactivated here (never deleted).
-    path: '/dms/admin/project-roles',
-    title: 'Project Roles',
-    titleKey: 'menuProjectRoles',
-    dmsRoles: ['ProjectControl'],
-  },
-  {
     // مشخصات پرسنل — the master table the personnel assignments reference.
     path: '/dms/admin/personnel',
     title: 'Personnel',

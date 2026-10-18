@@ -26,6 +26,21 @@ export const ROUTE_ROLES: ReadonlyArray<{ prefix: string; roles: readonly DmsRol
   { prefix: '/admin', roles: ['ProjectControl'] },
 ];
 
+/**
+ * Routes closed to EVERYONE, full access included: screens taken out of the
+ * product while their data is kept. Checked before anything else, so no role
+ * opens them.
+ */
+export const CLOSED_PREFIXES: readonly string[] = [
+  // Crew job titles are no longer shown or asked for anywhere. The roles table
+  // stays as it is, with every assignment's role kept.
+  '/admin/project-roles',
+];
+
+export function isClosedRoute(pathname: string): boolean {
+  return CLOSED_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix + '/'));
+}
+
 export type RouteDecision = 'allow' | 'forbidden';
 
 /**
@@ -44,6 +59,7 @@ export function ruleFor(pathname: string) {
 }
 
 export function decideRoute(access: DmsAccess, pathname: string): RouteDecision {
+  if (isClosedRoute(normaliseDmsPath(pathname))) return 'forbidden';
   if (access.full) return 'allow';
   const rule = ruleFor(normaliseDmsPath(pathname));
   if (!rule) return access.roles.length > 0 ? 'allow' : 'forbidden';

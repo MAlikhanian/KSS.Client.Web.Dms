@@ -39,7 +39,6 @@ import {
   listShifts,
 } from '@/lib/dms/store';
 import { useDmsActor } from '../../_lib/use-dms-actor';
-import { projectRoleName, useProjectRoles } from '../../_components/project-role-select';
 import { formatJalaliDate, todayIsoInTehran } from '../../_lib/jalali-date';
 
 /**
@@ -69,7 +68,6 @@ export function PersonnelAssignmentsContent() {
   const { t } = useTranslation('dms');
   const queryClient = useQueryClient();
   const { actor, ready } = useDmsActor('ProjectControl');
-  const rolesQuery = useProjectRoles();
 
   const [projectId, setProjectId] = useState('');
   // Today, as the natural question. Editable, because "who was on this in
@@ -297,12 +295,11 @@ export function PersonnelAssignmentsContent() {
             )}
 
             {assignmentsQuery.isSuccess && rows.length > 0 && (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto" data-dms-assignments="crew-role-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>{t('person', { defaultValue: 'Person' })}</TableHead>
-                      <TableHead>{t('role', { defaultValue: 'Role' })}</TableHead>
                       <TableHead>{t('shift', { defaultValue: 'Shift' })}</TableHead>
                       <TableHead>{t('startDate', { defaultValue: 'Start' })}</TableHead>
                       <TableHead>{t('endDate', { defaultValue: 'End' })}</TableHead>
@@ -325,7 +322,6 @@ export function PersonnelAssignmentsContent() {
                             */}
                             {person?.fullName ?? a.personnelId}
                           </TableCell>
-                          <TableCell>{projectRoleName(rolesQuery.data, a.roleId)}</TableCell>
                           <TableCell>
                             {shift ? `${shift.name} (${shift.timeRangeText})` : '—'}
                           </TableCell>

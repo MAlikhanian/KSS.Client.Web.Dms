@@ -29,7 +29,6 @@ import {
   listProjects,
   listShifts,
 } from '@/lib/dms/store';
-import { ProjectRoleSelect } from '../../../_components/project-role-select';
 import { useDmsActor } from '../../../_lib/use-dms-actor';
 
 /**
@@ -58,7 +57,6 @@ export function AssignPersonnelContent() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [shiftId, setShiftId] = useState('');
-  const [roleId, setRoleId] = useState('');
 
   const [projectsQuery, personnelQuery, shiftsQuery] = useQueries({
     queries: [
@@ -80,7 +78,6 @@ export function AssignPersonnelContent() {
         // rather than an open assignment.
         ...(endDate !== '' ? { endDate } : {}),
         ...(shiftId !== '' ? { shiftId } : {}),
-        ...(roleId !== '' ? { roleId } : {}),
         actor,
       });
     },
@@ -224,13 +221,6 @@ export function AssignPersonnelContent() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="pa-new-role">
-                  {t('role', { defaultValue: 'Role' })}
-                </Label>
-                <ProjectRoleSelect id="pa-new-role" value={roleId} onChange={setRoleId} />
               </div>
             </div>
 
