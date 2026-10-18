@@ -12,6 +12,7 @@ import { canEditFields } from '@/lib/dms/workflow';
 import { CyclesSection, StoppagesSection } from '../../_components';
 import { OperationsSection } from './operations-section';
 import { ReportInfoSection } from './report-info-section';
+import { WithdrawSection } from './withdraw-section';
 
 /**
  * Fieldset host for the day.
@@ -24,7 +25,9 @@ import { ReportInfoSection } from './report-info-section';
  * throws on save.
  *
  * The Operations card lives INSIDE the fieldset as its last child, so the
- * read-only switch reaches it and its spacing matches the sections.
+ * read-only switch reaches it and its spacing matches the sections. The
+ * Withdraw card lives OUTSIDE it: it is offered exactly when the report is
+ * read-only, and inside the fieldset it would be disabled.
  */
 export function DailyReportForm({
   report,
@@ -119,6 +122,8 @@ export function DailyReportForm({
             <OperationsSection report={report} actor={actor} />
           </div>
         </fieldset>
+
+        <WithdrawSection report={report} actor={actor} />
       </div>
     </div>
   );

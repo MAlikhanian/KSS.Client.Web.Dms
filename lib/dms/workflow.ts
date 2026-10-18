@@ -6,6 +6,8 @@
  *                     محاسبات KPI شرکت داده می‌شوند»)
  *       | Rejected  («قفل ویرایش برای اپراتور باز می‌شود و علت رد به عنوان
  *                     یادداشت ثبت می‌شود»)
+ *       | Draft     (Withdraw: the operator who sent it takes it back while it
+ *                     is still waiting for review)
  *
  * Pure: no storage, no clock of its own, no side effects. The SERVICE applies
  * the workflow on every status change; the screens use `canTransition` and
@@ -39,7 +41,8 @@ import type { DmsActor, DmsDailyOperationReport } from './types';
 export type ReportAction =
   | { type: 'Submit' }
   | { type: 'Approve' }
-  | { type: 'Reject'; reason: string };
+  | { type: 'Reject'; reason: string }
+  | { type: 'Withdraw' };
 
 /**
  * Which role may perform which action.
@@ -54,6 +57,7 @@ const ACTOR_FOR_ACTION: Record<ReportAction['type'], DmsActor['role']> = {
   Submit: 'Operator',
   Approve: 'VesselSupervisor',
   Reject: 'VesselSupervisor',
+  Withdraw: 'Operator',
 };
 
 /**
@@ -144,6 +148,29 @@ export function transition(
         rejectionNote: reason,
         rejectedAt: now,
         rejectedBy: actor.userId,
+        updatedAt: now,
+      };
+    }
+
+    case 'Withdraw': {
+      if (report.approvalStatus !== 'Submitted') {
+        throw conflict(
+          `A report may be withdrawn from Submitted only; '${report.id}' is ${report.approvalStatus}.`,
+        );
+      }
+      // Only the operator who sent it may take it back. The ids are compared
+      // without regard to case, since one id may be written in either case.
+      const sentBy = report.submittedBy?.toLowerCase();
+      if (!sentBy || sentBy !== actor.userId.toLowerCase()) {
+        throw forbidden(
+          `Only the operator who submitted report '${report.id}' may withdraw it.`,
+        );
+      }
+      return {
+        ...report,
+        approvalStatus: 'Draft',
+        submittedAt: undefined,
+        submittedBy: undefined,
         updatedAt: now,
       };
     }
