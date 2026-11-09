@@ -9,28 +9,29 @@ import { VESSEL_FIELDS, type VesselFieldDef, type VesselFieldKey } from './vesse
  * His «طول» is the overall length and the cutter's «توان کل» is the engine
  * power; both are shown with his own titles (VESSEL_TYPE_TITLES_FA).
  *
- * A vessel with no type, or a type not listed here, gets every field, as
- * before.
+ * A vessel with no type, or a type not listed here, gets every field that is
+ * not type-scoped, as before: a type-scoped field has no meaning without its
+ * type, and the service refuses a value for it.
  */
 export const VESSEL_TYPE_FIELDS: Readonly<Record<string, readonly VesselFieldKey[]>> = {
   HOPPER_SUCTION: [
-    'name', 'vesselType', 'manufacturer', 'buildYear', 'refitYear', 'model', 'portOfRegistry',
-    'overallLengthM', 'lengthWithLadderM', 'beamM',
-    'dredgingDepthM', 'pumpShaftPower', 'speed',
+    'name', 'vesselType', 'manufacturer', 'buildYear', 'refitYear', 'model', 'portOfRegistry', 'registrationDate',
+    'overallLengthM', 'lengthWithLadderM', 'beamM', 'hullDepthM', 'netTonnage', 'grossTonnage',
+    'dredgingDepthM', 'propellerShaftPowerKw', 'pumpShaftPower', 'speed', 'suctionArmCount', 'tankCapacityM3',
   ],
   CUTTER_SUCTION: [
     'name', 'vesselType', 'manufacturer', 'buildYear', 'refitYear', 'portOfRegistry', 'model',
-    'overallLengthM', 'lengthWithLadderM', 'beamM', 'heightM', 'draftM',
+    'overallLengthM', 'lengthWithLadderM', 'beamM', 'heightM', 'draftM', 'netDeckCapacityT', 'grossDeckCapacityT',
     'dredgingDepthM', 'cutterPowerKw', 'enginePower',
   ],
   SPLIT_BARGE: [
-    'name', 'vesselType', 'manufacturer', 'buildYear', 'refitYear', 'model', 'portOfRegistry',
-    'overallLengthM', 'beamM',
+    'name', 'vesselType', 'manufacturer', 'buildYear', 'refitYear', 'model', 'portOfRegistry', 'registrationDate',
+    'overallLengthM', 'beamM', 'hullDepthM', 'netTonnage', 'grossTonnage',
     'dredgingDepthM', 'speed',
   ],
   MULTICAT: [
-    'name', 'vesselType', 'manufacturer', 'buildYear', 'refitYear', 'portOfRegistry',
-    'overallLengthM', 'beamM',
+    'name', 'vesselType', 'manufacturer', 'buildYear', 'refitYear', 'portOfRegistry', 'registrationDate',
+    'overallLengthM', 'beamM', 'hullDepthM', 'netTonnage', 'grossTonnage', 'craneCapacityT',
     'enginePower', 'speed',
   ],
 };
@@ -68,29 +69,37 @@ export function typeTitleFa(vesselType: string | undefined, key: VesselFieldKey)
   return VESSEL_TYPE_TITLES_FA[vesselType as string][key];
 }
 
-/** The fields the form shows for this type, in order; every field when it has no form of its own. */
+/**
+ * The fields the form shows for this type, in order; every field that is not
+ * type-scoped when it has no form of its own.
+ */
 export function fieldsForType(vesselType: string | undefined): readonly VesselFieldDef[] {
-  if (!hasTypeForm(vesselType)) return VESSEL_FIELDS;
+  if (!hasTypeForm(vesselType)) return VESSEL_FIELDS.filter((f) => !f.typeScoped);
   const byKey = new Map(VESSEL_FIELDS.map((f) => [f.key, f]));
   return VESSEL_TYPE_FIELDS[vesselType as string].map((key) => byKey.get(key) as VesselFieldDef);
 }
 
 /**
- * The stored values of the fields a type's form does not show. An edit sends
- * the whole form as its patch, and a present key holding nothing reaches the
+ * The fields a type's form does not show, for the patch. An edit sends the
+ * whole form as its patch, and a present key holding nothing reaches the
  * service as `null`, which clears it. So each hidden field goes back exactly as
  * it was read; one with nothing stored is left out ("unchanged").
+ *
+ * A hidden TYPE-SCOPED field with a stored value is the exception: it can only
+ * be there because the type was just changed, the new type does not use it,
+ * and the service refuses to keep it. It is sent empty, which clears it.
  */
 export function hiddenStoredValues(
   vessel: DmsVessel,
   shown: readonly VesselFieldDef[],
-): Partial<Record<VesselFieldKey, string | number>> {
+): Partial<Record<VesselFieldKey, string | number | undefined>> {
   const shownKeys = new Set(shown.map((f) => f.key));
-  const out: Partial<Record<VesselFieldKey, string | number>> = {};
+  const out: Partial<Record<VesselFieldKey, string | number | undefined>> = {};
   for (const field of VESSEL_FIELDS) {
     if (shownKeys.has(field.key)) continue;
     const stored: unknown = vessel[field.key];
-    if (typeof stored === 'string' || typeof stored === 'number') out[field.key] = stored;
+    if (typeof stored !== 'string' && typeof stored !== 'number') continue;
+    out[field.key] = field.typeScoped ? undefined : stored;
   }
   return out;
 }

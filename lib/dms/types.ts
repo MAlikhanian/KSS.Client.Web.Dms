@@ -367,6 +367,21 @@ export interface DmsVessel {
   pumpShaftPower?: number; // PROPOSED — name ours, FRD ۲-۳ «توان شفت پمپ»
   cutterShaftPower?: number; // PROPOSED — name ours, FRD ۲-۳ «توان شفت کاتر»
   speed?: number; // PROPOSED — name ours, FRD ۲-۳ «سرعت» — KNOTS (the customer fixed the unit the FRD left open)
+
+  /**
+   * Fields that belong to some vessel types only. The service always returns
+   * them, null when unset, and refuses a value for a type that does not use it.
+   */
+  registrationDate?: string | null; // yyyy-MM-dd
+  hullDepthM?: number | null;
+  netTonnage?: number | null;
+  grossTonnage?: number | null;
+  propellerShaftPowerKw?: number | null;
+  suctionArmCount?: number | null;
+  netDeckCapacityT?: number | null;
+  grossDeckCapacityT?: number | null;
+  craneCapacityT?: number | null;
+  tankCapacityM3?: number | null;
 }
 
 /**

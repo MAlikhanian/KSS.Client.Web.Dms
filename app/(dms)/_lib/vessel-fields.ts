@@ -22,7 +22,17 @@ export interface VesselFieldDef {
   key: VesselFieldKey;
   /** Non-optional on DmsVessel — see ProjectFieldDef.required. */
   required?: true;
-  kind: 'text' | 'number';
+  kind: 'text' | 'number' | 'date';
+  /**
+   * Used by some vessel types only: the service refuses a value for any other
+   * type, so a form that does not show it never sends it back, and a stored
+   * value that a type change leaves behind is cleared.
+   */
+  typeScoped?: true;
+  /** A count: whole numbers only. */
+  integer?: true;
+  /** Shown with thousands separators. */
+  thousands?: true;
   /** English default; the Persian label is the customer's own wording, quoted for reference. */
   label: string;
   specLabel: string;
@@ -58,6 +68,17 @@ export const VESSEL_FIELDS: readonly VesselFieldDef[] = [
   // The three shaft/engine powers above are kW by OUR choice (the customer named
   // no unit), which is exactly why the label must say so.
   { key: 'speed', kind: 'number', label: 'Speed (knots)', specLabel: 'سرعت', group: 'capability' },
+
+  { key: 'registrationDate', typeScoped: true, kind: 'date', label: 'Registration date', specLabel: 'تاریخ ثبت', group: 'identity' },
+  { key: 'hullDepthM', typeScoped: true, kind: 'number', label: 'Hull depth (m)', specLabel: 'عمق', group: 'dimensions' },
+  { key: 'netTonnage', typeScoped: true, kind: 'number', label: 'Net tonnage (NT)', specLabel: 'ظرفیت خالص', group: 'dimensions' },
+  { key: 'grossTonnage', typeScoped: true, kind: 'number', label: 'Gross tonnage (GT)', specLabel: 'ظرفیت ناخالص', group: 'dimensions' },
+  { key: 'netDeckCapacityT', typeScoped: true, kind: 'number', label: 'Net deck capacity (t)', specLabel: 'ظرفیت خالص عرشه', group: 'dimensions' },
+  { key: 'grossDeckCapacityT', typeScoped: true, kind: 'number', label: 'Gross deck capacity (t)', specLabel: 'ظرفیت ناخالص عرشه', group: 'dimensions' },
+  { key: 'craneCapacityT', typeScoped: true, kind: 'number', label: 'Crane capacity (t)', specLabel: 'جرثقیل', group: 'dimensions' },
+  { key: 'propellerShaftPowerKw', typeScoped: true, kind: 'number', label: 'Propeller shaft power (kW)', specLabel: 'توان شفت پروانه', group: 'capability' },
+  { key: 'suctionArmCount', typeScoped: true, integer: true, kind: 'number', label: 'Number of suction arms', specLabel: 'تعداد بازوی مکش', group: 'capability' },
+  { key: 'tankCapacityM3', typeScoped: true, thousands: true, kind: 'number', label: 'Tank capacity (m³)', specLabel: 'ظرفیت مخزن', group: 'capability' },
 ] as const;
 
 export const VESSEL_FIELD_GROUPS: ReadonlyArray<{

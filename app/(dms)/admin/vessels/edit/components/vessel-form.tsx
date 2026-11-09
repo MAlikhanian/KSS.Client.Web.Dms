@@ -7,15 +7,20 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useTranslation } from '@/hooks/useTranslation';
-import { isDmsError } from '@/lib/dms/errors';
 import { updateVessel } from '@/lib/dms/store';
 import type { DmsActor, DmsVessel, VesselPatch } from '@/lib/dms/types';
-import {
-  parseOptionalNumber,
-  toEnglishDigits,
-  toPersianDigits,
-} from '../../../../_lib/digits';
+import { toEnglishDigits, toPersianDigits } from '../../../../_lib/digits';
+import { DmsDateInput } from '../../../../_components/dms-date-input';
 import { VesselTypeSelect } from '../../../../_components/vessel-type-select';
+import { todayIsoInTehran } from '../../../../_lib/jalali-date';
+import {
+  describeVesselSaveRefusal,
+  groupThousands,
+  parseFieldNumber,
+  problemText,
+  stripThousands,
+  vesselFieldProblems,
+} from '../../../../_lib/vessel-checks';
 import {
   VESSEL_FIELDS,
   VESSEL_FIELD_GROUPS,
@@ -63,6 +68,11 @@ export function VesselForm({
   // for a vessel with no type, or a type with no form of its own.
   const shown = fieldsForType(values.vesselType);
   const typeForm = hasTypeForm(values.vesselType);
+  const fieldLabel = (key: string) => {
+    const field = VESSEL_FIELDS.find((f) => f.key === key);
+    const own = typeForm && i18n.language !== 'en' && field ? typeTitleFa(values.vesselType, field.key) : undefined;
+    return own ?? t(`vesselField_${key}`, { defaultValue: field?.label ?? key });
+  };
 
   const saveMutation = useMutation({
     mutationFn: () =>
@@ -73,11 +83,7 @@ export function VesselForm({
       void queryClient.invalidateQueries({ queryKey: ['dms', 'vessels'] });
     },
     onError: (error) => {
-      toast.error(
-        isDmsError(error)
-          ? `${error.message} (${error.code})`
-          : t('vesselSaveFailed', { defaultValue: 'The vessel could not be saved.' }),
-      );
+      toast.error(describeVesselSaveRefusal(error, (key, options) => t(key, options), fieldLabel));
     },
   });
 
@@ -86,6 +92,7 @@ export function VesselForm({
   const missingRequired = shown.filter(
     (f) => f.required && (values[f.key] ?? '').trim().length === 0,
   );
+  const problems = vesselFieldProblems(shown, values, todayIsoInTehran());
 
   return (
     <div
@@ -148,7 +155,7 @@ export function VesselForm({
             <CardContent className="py-4 flex items-center gap-2">
               <Button
                 variant="primary"
-                disabled={saveMutation.isPending || missingRequired.length > 0}
+                disabled={saveMutation.isPending || missingRequired.length > 0 || problems.length > 0}
                 onClick={() => saveMutation.mutate()}
               >
                 {saveMutation.isPending
@@ -163,6 +170,14 @@ export function VesselForm({
                       t(`vesselField_${f.key}`, { defaultValue: f.label }),
                     )
                     .join(', ')}
+                </span>
+              )}
+              {problems.length > 0 && (
+                <span className="text-sm text-destructive" data-dms-vessel-checks="vessel-field-checks">
+                  {t('vesselFixBeforeSaving', { defaultValue: 'Fix before saving:' })}{' '}
+                  {problems
+                    .map(({ field, problem }) => `${fieldLabel(field.key)} ${problemText(problem, (key, options) => t(key, options))}`)
+                    .join(' · ')}
                 </span>
               )}
             </CardContent>
@@ -189,6 +204,16 @@ function FieldInput({
   // Build and refit years are JALALI years; typed with either keyboard's digits
   // and shown in Persian digits, stored as a number.
   const jalaliYear = field.key === 'buildYear' || field.key === 'refitYear';
+  if (field.kind === 'date') {
+    return (
+      <div className="space-y-1.5">
+        <label className="text-sm font-medium block" htmlFor={`vessel-${field.key}`}>
+          {title ?? t(`vesselField_${field.key}`, { defaultValue: field.label })}
+        </label>
+        <DmsDateInput id={`vessel-${field.key}`} value={value} onChange={onChange} clearable />
+      </div>
+    );
+  }
   if (field.key === 'vesselType') {
     return (
       <div className="space-y-1.5">
@@ -206,15 +231,18 @@ function FieldInput({
       </label>
       <Input
         id={`vessel-${field.key}`}
-        value={jalaliYear ? toPersianDigits(value) : value}
+        value={jalaliYear ? toPersianDigits(value) : field.thousands ? groupThousands(value) : value}
         placeholder={jalaliYear ? '۱۴۰۰' : undefined}
-        inputMode={field.kind === 'number' ? (jalaliYear ? 'numeric' : 'decimal') : undefined}
+        inputMode={field.kind === 'number' ? (jalaliYear || field.integer ? 'numeric' : 'decimal') : undefined}
         onChange={(e) =>
           onChange(
             // Normalised on the way in, so a Persian-keyboard '۱۹۹۸' does not
-            // reach Number() as NaN and get stored as a missing value.
+            // reach Number() as NaN and get stored as a missing value. The
+            // thousands separators are display only: the value holds none.
             field.kind === 'number'
-              ? toEnglishDigits(e.target.value)
+              ? field.thousands
+                ? stripThousands(e.target.value)
+                : toEnglishDigits(e.target.value)
               : e.target.value,
           )
         }
@@ -246,7 +274,7 @@ function toPatch(
   for (const field of shown) {
     const raw = values[field.key] ?? '';
     if (field.kind === 'number') {
-      patch[field.key] = parseOptionalNumber(raw);
+      patch[field.key] = parseFieldNumber(field, raw);
     } else {
       const trimmed = raw.trim();
       patch[field.key] = trimmed.length > 0 ? trimmed : undefined;
