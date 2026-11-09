@@ -331,7 +331,7 @@ function ProjectFigures({ data }: { data: DmsDashboard }) {
       {/* The specification's defined quantities. */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         <KpiQuantityTile
-          label={t('tOp', { defaultValue: 'T_OP — operating time' })}
+          label={t('tOp', { defaultValue: 'Total operating time' })}
           value={formatMinutes(data.totals.operatingMinutes)}
           unit="h:mm"
           note={t('tOpNote', {
@@ -339,18 +339,18 @@ function ProjectFigures({ data }: { data: DmsDashboard }) {
           })}
         />
         <KpiQuantityTile
-          label={t('tPd', { defaultValue: 'T_PD — planned downtime' })}
+          label={t('tPd', { defaultValue: 'Total planned stoppage time' })}
           value={formatMinutes(data.totals.plannedStoppageMinutes)}
           unit="h:mm"
           note={t('tPdNote', { defaultValue: 'Stoppages flagged is_planned = true only.' })}
         />
         <KpiQuantityTile
-          label={t('tUpd', { defaultValue: 'T_UPD — unplanned downtime' })}
+          label={t('tUpd', { defaultValue: 'Total unplanned stoppage time' })}
           value={formatMinutes(data.totals.unplannedStoppageMinutes)}
           unit="h:mm"
         />
         <KpiQuantityTile
-          label={t('tAv', { defaultValue: 'T_AV — available time' })}
+          label={t('tAv', { defaultValue: 'Total available time' })}
           value={formatMinutes(data.totals.availableMinutes)}
           unit="h:mm"
           note={t('tAvNote', {

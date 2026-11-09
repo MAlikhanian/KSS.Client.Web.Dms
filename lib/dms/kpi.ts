@@ -143,8 +143,9 @@ export interface DmsIntermediateTotals {
    * PROVENANCE: the label reached this file through four hops — his message,
    * an extract, a relay, this edit — which is where a ZWNJ dies. It was then
    * compared BYTE-FOR-BYTE against the FRD and is an exact substring of it,
-   * spacing included. «دردسترس» is joined because HE joins it; do not
-   * normalise it to «در دسترس».
+   * spacing included. «دردسترس» in the §4 quotes is joined because the
+   * specification joins it, so the quotes keep it; the screen title is a
+   * later wording, «کل زمان در دسترس», and is spaced.
    *
    * The caveat that stood here came off because someone checked, not because
    * anyone gave an assurance.
