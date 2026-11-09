@@ -11,13 +11,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
 import {
@@ -32,6 +25,8 @@ import {
   StoppagesSection,
   type ReportDateRangeValue,
 } from '../_components';
+import { ProjectPicker } from '../_components/project-picker';
+import { isPreviousProject } from '../_lib/project-groups';
 import { STATUS_BADGE } from '../_lib/report-status';
 import { useDmsActor } from '../_lib/use-dms-actor';
 import { DecisionSection } from './components';
@@ -61,6 +56,11 @@ export function ApprovalsContent() {
     queryFn: () => listProjects({}),
     enabled: ready,
   });
+
+  // The chosen project's assignment does not cover today (only a past or a
+  // future window does): its days stay reachable, no new day is offered.
+  const endedAssignment =
+    projectsQuery.data?.some((p) => p.id === projectId && isPreviousProject(p)) ?? false;
 
   const pendingQuery = useQuery({
     queryKey: ['dms', 'reports', projectId, 'Submitted', range.from, range.to],
@@ -144,28 +144,23 @@ export function ApprovalsContent() {
             <label className="text-sm font-medium block" htmlFor="dms-approval-project">
               {t('project', { defaultValue: 'Project' })}
             </label>
-            <Select
-              value={projectId || undefined}
-              onValueChange={(value) => {
+            <ProjectPicker
+              id="dms-approval-project"
+              projects={projectsQuery.data}
+              value={projectId}
+              onChange={(value) => {
                 setProjectId(value);
                 setOpenReportId(null);
               }}
-            >
-              <SelectTrigger id="dms-approval-project" className="w-full">
-                <SelectValue
-                  placeholder={t('selectProject', {
-                    defaultValue: 'Select a project…',
-                  })}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {projectsQuery.data?.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.projectCode} — {p.contractSubject}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
+            {endedAssignment && (
+              <p className="text-sm text-muted-foreground">
+                {t('previousProjectReviewHint', {
+                  defaultValue:
+                    'Your assignment on this project does not cover today. You can still review the days sent to you.',
+                })}
+              </p>
+            )}
             <ReportDateRange
               idPrefix="dms-approval-range"
               value={range}

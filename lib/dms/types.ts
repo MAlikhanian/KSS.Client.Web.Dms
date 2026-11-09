@@ -218,6 +218,13 @@ export const ALL_RESPONSIBLE_PARTIES: readonly ResponsibleParty[] = [
 export interface DmsProject {
   /** Not listed in ۲-۱, but ۲-۴ declares `FK (Projects.id)`, so it exists. */
   id: string; // PROPOSED — not in FRD (implied by ۲-۴ FK Projects.id)
+  /**
+   * Whether one of the caller's assignment windows on this project covers
+   * today: true; false when only a past or a future window does (its existing
+   * days can still be finished, no new day is started); null for a role the
+   * list is not scoped by. Absent or null counts as covering today.
+   */
+  assignedToday?: boolean | null;
   projectCode: string; // PROPOSED — name ours, FRD ۲-۱ «کد پروژه» (auto-generated, unique)
   contractNumber: string; // PROPOSED — name ours, FRD ۲-۱ «شماره قرارداد پیمان»
   contractSubject: string; // PROPOSED — name ours, FRD ۲-۱ «موضوع پیمان/قرارداد»

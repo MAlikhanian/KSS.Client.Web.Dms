@@ -11,13 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { DmsDateInput } from '../_components/dms-date-input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { ProjectPicker } from '../_components/project-picker';
 import { useTranslation } from '@/hooks/useTranslation';
 import { isDmsError } from '@/lib/dms/errors';
 import {
@@ -29,6 +23,7 @@ import type { DmsDailyOperationReport } from '@/lib/dms/types';
 import { useDmsActor } from '../_lib/use-dms-actor';
 import { DailyReportForm } from './components';
 import { formatJalaliDate, todayIsoInTehran } from '../_lib/jalali-date';
+import { isPreviousProject } from '../_lib/project-groups';
 
 /**
  * Operator screen — §1: «ثبت گزارش روزانه، چرخه‌های عملیاتی و توقفات مربوط به
@@ -51,6 +46,11 @@ export function DailyReportContent() {
     queryFn: () => listProjects({}),
     enabled: ready,
   });
+
+  // The chosen project's assignment does not cover today (only a past or a
+  // future window does): its days stay reachable, no new day is offered.
+  const endedAssignment =
+    projectsQuery.data?.some((p) => p.id === projectId && isPreviousProject(p)) ?? false;
 
   const reportsQuery = useQuery({
     queryKey: ['dms', 'reports', projectId],
@@ -114,31 +114,23 @@ export function DailyReportContent() {
             <label className="text-sm font-medium block" htmlFor="dms-project">
               {t('project', { defaultValue: 'Project' })}
             </label>
-            {/* Radix rejects an empty string as a SelectItem value, so the
-                "nothing chosen" state is `undefined` plus a placeholder rather
-                than a blank option row. */}
-            <Select
-              value={projectId || undefined}
-              onValueChange={(value) => {
+            <ProjectPicker
+              id="dms-project"
+              projects={projectsQuery.data}
+              value={projectId}
+              onChange={(value) => {
                 setProjectId(value);
                 setOpenReportId(null);
               }}
-            >
-              <SelectTrigger id="dms-project" className="w-full">
-                <SelectValue
-                  placeholder={t('selectProject', {
-                    defaultValue: 'Select a project…',
-                  })}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {projectsQuery.data?.map((p) => (
-                  <SelectItem key={p.id} value={p.id}>
-                    {p.projectCode} — {p.contractSubject}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            />
+            {endedAssignment && (
+              <p className="text-sm text-muted-foreground">
+                {t('previousProjectHint', {
+                  defaultValue:
+                    'Your assignment on this project does not cover today. You can open and finish its existing days; a new day cannot be started here.',
+                })}
+              </p>
+            )}
             {projectsQuery.isError && (
               <p className="text-sm text-destructive">
                 {describeError(projectsQuery.error)}
@@ -183,11 +175,17 @@ export function DailyReportContent() {
         <NoticeCard
           tone="black"
           title={t('noDaysTitle', { defaultValue: 'No days recorded yet' })}
-          body={t('noDaysBody', {
-            defaultValue:
-              'This project has no daily reports. Start the first one below.',
-          })}
-          action={<NewDayButton onCreate={(d) => createMutation.mutate(d)} />}
+          body={
+            endedAssignment
+              ? t('previousNoDaysBody', {
+                  defaultValue: 'Your assignment on this project does not cover today, and it has no days to finish.',
+                })
+              : t('noDaysBody', {
+                  defaultValue:
+                    'This project has no daily reports. Start the first one below.',
+                })
+          }
+          action={endedAssignment ? undefined : <NewDayButton onCreate={(d) => createMutation.mutate(d)} />}
         />
       )}
 
@@ -199,7 +197,7 @@ export function DailyReportContent() {
                 <h2 className="font-medium">
                   {t('days', { defaultValue: 'Days' })}
                 </h2>
-                <NewDayButton onCreate={(d) => createMutation.mutate(d)} />
+                {!endedAssignment && <NewDayButton onCreate={(d) => createMutation.mutate(d)} />}
               </div>
               {createMutation.isError && (
                 <p className="text-sm text-destructive">
