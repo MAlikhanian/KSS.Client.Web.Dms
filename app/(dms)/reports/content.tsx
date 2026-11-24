@@ -36,6 +36,7 @@ import {
 import { ReportInfoSection } from '../daily-report/components';
 import { formatJalaliDate } from '../_lib/jalali-date';
 import { STATUS_BADGE } from '../_lib/report-status';
+import { ReopenSection } from '../_components/reopen-section';
 import { useDmsActor } from '../_lib/use-dms-actor';
 
 /** The status filter's value for "every status". Not a ReportStatus. */
@@ -316,6 +317,7 @@ export function ReportsContent() {
               error={stoppagesQuery.error}
             />
           </div>
+          <ReopenSection report={openReport} actor={actor} />
         </div>
       )}
     </div>

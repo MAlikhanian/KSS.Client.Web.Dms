@@ -42,7 +42,8 @@ export type ReportAction =
   | { type: 'Submit' }
   | { type: 'Approve' }
   | { type: 'Reject'; reason: string }
-  | { type: 'Withdraw' };
+  | { type: 'Withdraw' }
+  | { type: 'Reopen' };
 
 /**
  * Which role may perform which action.
@@ -53,7 +54,7 @@ export type ReportAction =
  * «تایید نهایی گزارش یا رد آن جهت اصلاح توسط اپراتور به همراه درج علت رد».
  * ۲-۷'s `approved_by` is «شناسه سرپرست تاییدکننده», the approving supervisor.
  */
-const ACTOR_FOR_ACTION: Record<ReportAction['type'], DmsActor['role']> = {
+const ACTOR_FOR_ACTION: Record<Exclude<ReportAction['type'], 'Reopen'>, DmsActor['role']> = {
   Submit: 'Operator',
   Approve: 'VesselSupervisor',
   Reject: 'VesselSupervisor',
@@ -65,7 +66,7 @@ const ACTOR_FOR_ACTION: Record<ReportAction['type'], DmsActor['role']> = {
  * operator «امکان ویرایش اطلاعات تا پیش از ارسال به سرپرست», and §3 reopens
  * the lock on rejection.
  */
-const EDITABLE_STATUSES = ['Draft', 'Rejected'] as const;
+const EDITABLE_STATUSES = ['Draft', 'Rejected', 'Reopened'] as const;
 
 /**
  * Apply an action. Returns a NEW report; never mutates the input.
@@ -80,6 +81,22 @@ export function transition(
   actor: DmsActor,
   now: string = new Date().toISOString(),
 ): DmsDailyOperationReport {
+  // Reopen is offered to one person, whom the zone cannot name: the service
+  // decides and says so in the report's `canReopen`. It is the only action an
+  // Approved report allows, and it leads back to the normal path: the
+  // operator edits and submits the reopened day as a rejected one.
+  if (action.type === 'Reopen') {
+    if (report.approvalStatus !== 'Approved') {
+      throw conflict(
+        `A report may be reopened from Approved only; '${report.id}' is ${report.approvalStatus}.`,
+      );
+    }
+    if (report.canReopen !== true) {
+      throw forbidden(`This caller may not reopen report '${report.id}'.`);
+    }
+    return { ...report, approvalStatus: 'Reopened', canReopen: false, updatedAt: now };
+  }
+
   const requiredRole = ACTOR_FOR_ACTION[action.type];
   if (actor.role !== requiredRole) {
     throw forbidden(
@@ -87,9 +104,9 @@ export function transition(
     );
   }
 
-  // Approved is permanent (§3, «قفل دائم»). Checked before the per-action
-  // rules so every action against an approved report fails the same way,
-  // including a second Approve.
+  // Approved is permanent (§3, «قفل دائم») for every action but Reopen,
+  // handled above. Checked before the per-action rules so every other action
+  // against an approved report fails the same way, including a second Approve.
   if (report.approvalStatus === 'Approved') {
     throw conflict(
       `Report '${report.id}' is approved and permanently locked; no further transition is possible.`,
@@ -100,10 +117,11 @@ export function transition(
     case 'Submit': {
       if (
         report.approvalStatus !== 'Draft' &&
-        report.approvalStatus !== 'Rejected'
+        report.approvalStatus !== 'Rejected' &&
+        report.approvalStatus !== 'Reopened'
       ) {
         throw conflict(
-          `A report may be submitted from Draft or Rejected only; '${report.id}' is ${report.approvalStatus}.`,
+          `A report may be submitted from Draft, Rejected or Reopened only; '${report.id}' is ${report.approvalStatus}.`,
         );
       }
       return {

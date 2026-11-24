@@ -7,12 +7,13 @@ import type { ReportStatus } from '@/lib/dms/types';
  */
 export const STATUS_BADGE: Record<
   ReportStatus,
-  { variant: 'secondary' | 'warning' | 'success' | 'destructive'; key: string; fallback: string }
+  { variant: 'secondary' | 'warning' | 'success' | 'destructive' | 'info'; key: string; fallback: string }
 > = {
   Draft: { variant: 'secondary', key: 'statusDraft', fallback: 'Draft' },
   Submitted: { variant: 'warning', key: 'statusSubmitted', fallback: 'Submitted' },
   Approved: { variant: 'success', key: 'statusApproved', fallback: 'Approved' },
   Rejected: { variant: 'destructive', key: 'statusRejected', fallback: 'Rejected' },
+  Reopened: { variant: 'info', key: 'statusReopened', fallback: 'Reopened' },
 };
 
 /**

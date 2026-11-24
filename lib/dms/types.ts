@@ -131,13 +131,14 @@ export interface DmsActor {
  * §3 confirms the machine, including Approved ⇒ «کل داده‌های آن روز قفل دائم
  * شده و در محاسبات KPI شرکت داده می‌شوند».
  */
-export type ReportStatus = 'Draft' | 'Submitted' | 'Approved' | 'Rejected';
+export type ReportStatus = 'Draft' | 'Submitted' | 'Approved' | 'Rejected' | 'Reopened';
 
 export const ALL_REPORT_STATUSES: readonly ReportStatus[] = [
   'Draft',
   'Submitted',
   'Approved',
   'Rejected',
+  'Reopened',
 ] as const;
 
 /**
@@ -579,6 +580,12 @@ export interface DmsDailyOperationReport {
   registeredByName?: string | null; // PROPOSED — the service's display name for registeredBy; null when it has none
   approvedBy?: string; // FRD ۲-۷ approved_by — PARSED (FK Users.id — «شناسه سرپرست تاییدکننده»)
   approvalStatus: ReportStatus; // FRD ۲-۷ approval_status — PARSED (VARCHAR(30))
+  /**
+   * Whether the caller may reopen this approved report. The service decides
+   * (one named person only) and enforces the same rule; this only decides
+   * whether the button is offered.
+   */
+  canReopen?: boolean;
   /**
    * ۲-۷ gives this as plain TEXT with no NOT NULL. The requirement that it be
    * present comes from the workflow prose, not the column: §1 «به همراه درج

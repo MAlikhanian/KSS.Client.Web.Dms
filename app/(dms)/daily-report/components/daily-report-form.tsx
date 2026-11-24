@@ -13,6 +13,7 @@ import { CyclesSection, StoppagesSection } from '../../_components';
 import { OperationsSection } from './operations-section';
 import { ReportInfoSection } from './report-info-section';
 import { WithdrawSection } from './withdraw-section';
+import { ReopenSection } from '../../_components/reopen-section';
 
 /**
  * Fieldset host for the day.
@@ -124,6 +125,10 @@ export function DailyReportForm({
         </fieldset>
 
         <WithdrawSection report={report} actor={actor} />
+
+        <div className="mt-6">
+          <ReopenSection report={report} actor={actor} />
+        </div>
       </div>
     </div>
   );
